@@ -28,7 +28,7 @@ Real-time monitoring platform for market-moving news with sentiment analysis, cr
 
 2. **Create `.env` file**
    ```bash
-   cp .env.example .env
+   cp env.example .env
    ```
 
 3. **Add your Binance credentials** (required)
