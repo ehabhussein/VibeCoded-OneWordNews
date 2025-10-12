@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitter Sentiment Bot - Real-Time Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            background-color: #0f1419;
+            color: #e7e9ea;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1da1f2 0%, #0c7abf 100%);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card {
+            background: #16181c;
+            border: 1px solid #2f3336;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #1da1f2;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #1da1f2;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #8b98a5;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chart-container {
+            background: #16181c;
+            border: 1px solid #2f3336;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .tweet-card {
+            background: #16181c;
+            border: 1px solid #2f3336;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .tweet-card:hover {
+            border-color: #1da1f2;
+            box-shadow: 0 2px 8px rgba(29, 161, 242, 0.3);
+        }
+
+        .tweet-card.new {
+            animation: slideIn 0.5s ease-out;
+            border-color: #17bf63;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .sentiment-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .sentiment-very-positive { background: #17bf63; color: white; }
+        .sentiment-positive { background: #1d9bf0; color: white; }
+        .sentiment-neutral { background: #536471; color: white; }
+        .sentiment-negative { background: #f91880; color: white; }
+        .sentiment-very-negative { background: #dc3545; color: white; }
+
+        .category-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            background: #1da1f2;
+            color: white;
+            margin-right: 5px;
+        }
+
+        .alert-card {
+            background: #2f1c1c;
+            border-left: 4px solid #dc3545;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .alert-card.critical {
+            border-left-color: #dc3545;
+            background: #3a1f1f;
+        }
+
+        .alert-card.high {
+            border-left-color: #f91880;
+            background: #331a25;
+        }
+
+        .alert-card.medium {
+            border-left-color: #ffa500;
+            background: #332a1a;
+        }
+
+        .filter-btn {
+            background: #16181c;
+            border: 1px solid #2f3336;
+            color: #e7e9ea;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 5px;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: #1da1f2;
+            border-color: #1da1f2;
+            color: white;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected {
+            background: #17bf63;
+        }
+
+        .status-indicator.disconnected {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .keywords-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 15px;
+        }
+
+        .keyword-tag {
+            background: #1da1f2;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .keyword-tag.new {
+            animation: fadeInScale 0.5s ease-out;
+            background: #17bf63;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .nav-tabs .nav-link {
+            color: #8b98a5;
+            border: none;
+            background: transparent;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #1da1f2;
+            background: #16181c;
+            border-bottom: 2px solid #1da1f2;
+        }
+
+        .table {
+            color: #e7e9ea;
+        }
+
+        .table-dark {
+            background-color: #16181c;
+            border-color: #2f3336;
+        }
+
+        /* D3 Bubble Chart Styles */
+        #latestKeywordsBubbleChart {
+            position: relative;
+            width: 100%;
+            height: 600px;
+        }
+
+        .bubble-node {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .bubble-node:hover {
+            opacity: 0.8;
+        }
+
+        .bubble-text {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-weight: 600;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* View Toggle Button Styles */
+        .view-toggle-btn, .view-toggle-btn-24h {
+            background: #16181c;
+            border: 1px solid #2f3336;
+            color: #8b98a5;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-toggle-btn:first-child, .view-toggle-btn-24h:first-child {
+            border-radius: 6px 0 0 6px;
+        }
+
+        .view-toggle-btn:last-child, .view-toggle-btn-24h:last-child {
+            border-radius: 0 6px 6px 0;
+        }
+
+        .view-toggle-btn:not(:first-child):not(:last-child) {
+            border-radius: 0;
+        }
+
+        .view-toggle-btn:hover, .view-toggle-btn-24h:hover {
+            background: #1f2327;
+            color: #e7e9ea;
+        }
+
+        .view-toggle-btn.active, .view-toggle-btn-24h.active {
+            background: #1da1f2;
+            border-color: #1da1f2;
+            color: white;
+        }
+
+        /* Treemap/Heatmap Styles */
+        .treemap-cell {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .treemap-cell:hover {
+            opacity: 0.8;
+        }
+
+        .treemap-text {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-weight: 600;
+            pointer-events: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid p-4">
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="stat-value" id="totalTweets">0</div>
+                    <div class="stat-label">Total Tweets</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="stat-value" id="avgSentiment">0.00</div>
+                    <div class="stat-label">Avg Sentiment</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="stat-value" id="recentAlerts">0</div>
+                    <div class="stat-label">Recent Alerts (24h)</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="stat-value" id="categoriesMonitored">6</div>
+                    <div class="stat-label">Categories Monitored</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Filters and Control Buttons -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <h5 class="mb-3">Filter by Category</h5>
+                    <button class="filter-btn active" data-category="all">All</button>
+                    <button class="filter-btn" data-category="trump">Trump</button>
+                    <button class="filter-btn" data-category="fomc">FOMC</button>
+                    <button class="filter-btn" data-category="markets">Markets</button>
+                    <button class="filter-btn" data-category="crypto">Crypto</button>
+                    <button class="filter-btn" data-category="commodities">Commodities</button>
+                    <button class="filter-btn" data-category="usa_news">USA News</button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="chart-container">
+                    <h5 class="mb-3">Admin Controls</h5>
+                    <button class="btn btn-primary btn-sm me-2" id="refreshRssBtn" title="Force refresh all RSS feeds">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
+                            <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
+                            <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/>
+                        </svg>
+                        Refresh RSS
+                    </button>
+                    <button class="btn btn-danger btn-sm" id="clearDatabaseBtn" title="Clear database and Redis cache">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/>
+                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/>
+                        </svg>
+                        Clear DB & Cache
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="chart-container">
+                    <h5 class="mb-3">Sentiment Time Series</h5>
+                    <div id="sentimentChart" style="height: 400px;"></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="chart-container">
+                    <h5 class="mb-3">Category Distribution</h5>
+                    <div id="categoryChart" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Keywords - Full Width -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="chart-container">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">🔥 Top Keywords (Last 24 Hours)</h5>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="view-toggle-btn-24h active" data-view="frequency" title="Sort by frequency/popularity">
+                                Frequency
+                            </button>
+                            <button type="button" class="view-toggle-btn-24h" data-view="timeline" title="Sort chronologically by first appearance">
+                                Timeline
+                            </button>
+                            <button type="button" class="view-toggle-btn-24h" data-view="semantic" title="Group by alphabetic/semantic similarity">
+                                Semantic
+                            </button>
+                            <button type="button" class="view-toggle-btn-24h" data-view="category" title="Group by news category">
+                                Category
+                            </button>
+                        </div>
+                    </div>
+                    <div id="wordFrequencyChart" style="min-height: 500px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Latest Keywords - Full Width -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="chart-container">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">🔥 Latest Keywords (Real-time - Last 2 Hours)</h5>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="view-toggle-btn active" data-view="bubble" title="Bubble Chart">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <circle cx="12" cy="12" r="4"/>
+                                    <circle cx="6" cy="8" r="2"/>
+                                    <circle cx="18" cy="8" r="2"/>
+                                    <circle cx="6" cy="16" r="2"/>
+                                    <circle cx="18" cy="16" r="2"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="view-toggle-btn" data-view="heatmap" title="Heatmap">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <rect x="2" y="2" width="9" height="9"/>
+                                    <rect x="13" y="2" width="9" height="9"/>
+                                    <rect x="2" y="13" width="9" height="9"/>
+                                    <rect x="13" y="13" width="9" height="9"/>
+                                </svg>
+                            </button>
+                            <button type="button" class="view-toggle-btn" data-view="network" title="Source Network">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <circle cx="12" cy="5" r="2"/>
+                                    <circle cx="5" cy="12" r="2"/>
+                                    <circle cx="19" cy="12" r="2"/>
+                                    <circle cx="12" cy="19" r="2"/>
+                                    <line x1="12" y1="7" x2="12" y2="17" stroke="currentColor" stroke-width="2"/>
+                                    <line x1="7" y1="12" x2="17" y2="12" stroke="currentColor" stroke-width="2"/>
+                                    <line x1="10" y1="7" x2="7" y2="10" stroke="currentColor" stroke-width="2"/>
+                                    <line x1="14" y1="7" x2="17" y2="10" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="latestKeywordsBubbleChart" style="min-height: 600px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Crypto Prices - Full Width -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="chart-container">
+                    <h5 class="mb-3">💰 Crypto Prices (Real-time WebSocket)</h5>
+                    <div id="cryptoChart" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forex Calendar - Full Width -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="chart-container">
+                    <h5 class="mb-3">📅 Forex Factory Calendar - USD Events (All Impacts)</h5>
+                    <div id="forexCalendarContainer" style="max-height: 600px; overflow-y: auto;">
+                        <p class="text-center text-muted">Loading forex calendar...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="chart-container">
+                    <h5 class="mb-3">Alerts</h5>
+                    <div id="alertsContainer" style="max-height: 600px; overflow-y: auto;">
+                        <p class="text-center text-muted">Loading alerts...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyword Articles Modal -->
+    <div class="modal fade" id="keywordArticlesModal" tabindex="-1" aria-labelledby="keywordArticlesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content" style="background-color: #16181c; border: 1px solid #2f3336;">
+                <div class="modal-header" style="border-bottom: 1px solid #2f3336;">
+                    <h5 class="modal-title" id="keywordArticlesModalLabel">News Articles</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="keywordArticlesContent">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>
