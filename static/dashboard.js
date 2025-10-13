@@ -2011,14 +2011,169 @@ function loadCryptoPredictions() {
 
 function displayPredictions(predictions) {
     const container = document.getElementById('cryptoPredictionsContainer');
-    
+
     const html = `
         <div class="row">
             ${predictions.map(pred => createPredictionCard(pred)).join('')}
         </div>
     `;
-    
+
     container.innerHTML = html;
+
+    // Add click handlers to prediction cards
+    predictions.forEach((pred, index) => {
+        const card = container.querySelectorAll('.prediction-card')[index];
+        if (card) {
+            card.style.cursor = 'pointer';
+            card.addEventListener('click', function() {
+                showCryptoArticlesModal(pred);
+            });
+        }
+    });
+}
+
+// Show crypto articles modal
+function showCryptoArticlesModal(prediction) {
+    // Get modal element
+    const modal = new bootstrap.Modal(document.getElementById('keywordArticlesModal'));
+
+    // Update modal title with crypto symbol and signal
+    document.getElementById('keywordArticlesModalLabel').textContent =
+        `${prediction.symbol} ${prediction.emoji} ${prediction.signal} - Articles Analyzed`;
+
+    // Show loading spinner
+    document.getElementById('keywordArticlesContent').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+
+    modal.show();
+
+    // Map crypto symbols to keywords
+    const symbolKeywordMap = {
+        'BTC': 'bitcoin',
+        'ETH': 'ethereum',
+        'SOL': 'solana',
+        'BNB': 'binance',
+        'XRP': 'ripple',
+        'ADA': 'cardano',
+        'DOGE': 'dogecoin',
+        'DOT': 'polkadot',
+        'MATIC': 'polygon',
+        'LTC': 'litecoin',
+        'SHIB': 'shiba',
+        'AVAX': 'avalanche',
+        'UNI': 'uniswap',
+        'LINK': 'chainlink',
+        'XLM': 'stellar'
+    };
+
+    const keyword = symbolKeywordMap[prediction.symbol] || prediction.symbol.toLowerCase();
+    const timeframeHours = parseInt(prediction.timeframe.replace('h', ''));
+
+    // Fetch articles for this crypto
+    fetch(`/api/keyword/${encodeURIComponent(keyword)}/articles?hours=${timeframeHours}&limit=50`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.articles && data.articles.length > 0) {
+                // Calculate sentiment distribution
+                const sentimentCounts = {
+                    positive: 0,
+                    negative: 0,
+                    neutral: 0
+                };
+
+                data.articles.forEach(article => {
+                    const sentiment = article.sentiment_label || 'neutral';
+                    if (sentiment.includes('positive')) sentimentCounts.positive++;
+                    else if (sentiment.includes('negative')) sentimentCounts.negative++;
+                    else sentimentCounts.neutral++;
+                });
+
+                // Render articles with sentiment summary
+                const articlesHTML = data.articles.map(article => {
+                    const sentiment = article.sentiment_label || 'neutral';
+                    const sentimentScore = article.sentiment_score || 0;
+                    const category = article.category || 'general';
+                    const createdAt = new Date(article.created_at).toLocaleString();
+
+                    return `
+                        <div class="tweet-card mb-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="category-badge">${category.toUpperCase()}</span>
+                                    <span class="sentiment-badge sentiment-${sentiment.replace('_', '-')}">${sentiment.replace('_', ' ').toUpperCase()}</span>
+                                </div>
+                                <small style="color: white;">${createdAt}</small>
+                            </div>
+                            <div class="mb-2">
+                                <strong>@${article.user_handle || 'Unknown'}</strong>
+                            </div>
+                            <p class="mb-2">${escapeHtml(article.text)}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Sentiment: ${sentimentScore.toFixed(2)}</small>
+                                <div>
+                                    <small class="text-muted me-3">❤️ ${article.like_count || 0}</small>
+                                    <small class="text-muted me-3">🔄 ${article.retweet_count || 0}</small>
+                                    <small class="text-muted">💬 ${article.reply_count || 0}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Create sentiment summary
+                const total = data.articles.length;
+                const posPercent = ((sentimentCounts.positive / total) * 100).toFixed(0);
+                const negPercent = ((sentimentCounts.negative / total) * 100).toFixed(0);
+                const neuPercent = ((sentimentCounts.neutral / total) * 100).toFixed(0);
+
+                const timeText = timeframeHours === 168 ? 'last week' :
+                                timeframeHours === 24 ? 'last 24 hours' :
+                                timeframeHours === 5 ? 'last 5 hours' :
+                                `last ${timeframeHours} hours`;
+
+                document.getElementById('keywordArticlesContent').innerHTML = `
+                    <div class="mb-3">
+                        <p class="text-muted mb-2">Found ${data.count} articles mentioning "<strong>${keyword}</strong>" in the ${timeText}</p>
+                        <div class="d-flex gap-2 mb-3">
+                            <span class="badge bg-success">Positive: ${posPercent}%</span>
+                            <span class="badge bg-danger">Negative: ${negPercent}%</span>
+                            <span class="badge bg-secondary">Neutral: ${neuPercent}%</span>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Prediction Summary:</strong><br>
+                            <span style="color: ${prediction.signal === 'Bullish' ? '#17bf63' : prediction.signal === 'Bearish' ? '#dc3545' : '#8b98a5'};">
+                                ${prediction.signal} ${prediction.emoji}
+                            </span>
+                            (Confidence: ${(prediction.confidence * 100).toFixed(0)}%)
+                        </div>
+                        <div class="mb-3" style="font-size: 0.9rem; color: #8b98a5; line-height: 1.4;">
+                            ${prediction.reasoning}
+                        </div>
+                    </div>
+                    ${articlesHTML}
+                `;
+            } else {
+                const timeText = timeframeHours === 168 ? 'last week' :
+                                timeframeHours === 24 ? 'last 24 hours' :
+                                timeframeHours === 5 ? 'last 5 hours' :
+                                `last ${timeframeHours} hours`;
+
+                document.getElementById('keywordArticlesContent').innerHTML = `
+                    <p class="text-center text-muted">No articles found for "${keyword}" in the ${timeText}</p>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading crypto articles:', error);
+            document.getElementById('keywordArticlesContent').innerHTML = `
+                <p class="text-center text-danger">Error loading articles. Please try again.</p>
+            `;
+        });
 }
 
 function createPredictionCard(prediction) {
