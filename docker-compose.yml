@@ -20,6 +20,7 @@ services:
     build: .
     container_name: twitter_sentiment_bot
     environment:
+      - TZ=Africa/Cairo
       - TWITTER_API_KEY=${TWITTER_API_KEY}
       - TWITTER_API_SECRET=${TWITTER_API_SECRET}
       - TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN}

@@ -208,12 +208,28 @@ class Database:
             print(f"Error inserting alert: {e}")
             return False
 
-    def get_recent_tweets(self, category: str = None, limit: int = 100) -> List[Dict]:
-        """Get recent tweets"""
+    def get_recent_tweets(self, category: str = None, hours: int = None, limit: int = 100) -> List[Dict]:
+        """Get recent tweets
+
+        Args:
+            category: Filter by category (optional)
+            hours: Filter by hours (optional, if None returns all)
+            limit: Maximum number of results
+        """
         conn = self.get_connection()
         cursor = conn.cursor()
 
-        if category:
+        if category and hours:
+            cursor.execute("""
+                SELECT t.*, s.sentiment_score, s.sentiment_label
+                FROM tweets t
+                LEFT JOIN sentiment_analysis s ON t.tweet_id = s.tweet_id
+                WHERE t.category = ?
+                AND datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
+                ORDER BY t.created_at DESC
+                LIMIT ?
+            """, (category, hours, limit))
+        elif category:
             cursor.execute("""
                 SELECT t.*, s.sentiment_score, s.sentiment_label
                 FROM tweets t
@@ -222,6 +238,15 @@ class Database:
                 ORDER BY t.created_at DESC
                 LIMIT ?
             """, (category, limit))
+        elif hours:
+            cursor.execute("""
+                SELECT t.*, s.sentiment_score, s.sentiment_label
+                FROM tweets t
+                LEFT JOIN sentiment_analysis s ON t.tweet_id = s.tweet_id
+                WHERE datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
+                ORDER BY t.created_at DESC
+                LIMIT ?
+            """, (hours, limit))
         else:
             cursor.execute("""
                 SELECT t.*, s.sentiment_score, s.sentiment_label
@@ -237,36 +262,41 @@ class Database:
 
     def get_word_frequency_stats(self, category: str = None, hours: int = 24,
                                   limit: int = 50) -> List[Dict]:
-        """Get word frequency statistics with timestamp information"""
+        """Get word frequency statistics with timestamp information
+
+        Uses the article's created_at time from tweets table for accurate time filtering
+        """
         conn = self.get_connection()
         cursor = conn.cursor()
 
         if category:
             cursor.execute("""
                 SELECT
-                    word,
+                    wf.word,
                     COUNT(*) as count,
-                    category,
-                    MIN(timestamp) as first_seen,
-                    MAX(timestamp) as last_seen
-                FROM word_frequency
-                WHERE category = ?
-                AND timestamp > datetime('now', '-' || ? || ' hours')
-                GROUP BY word, category
+                    wf.category,
+                    MIN(t.created_at) as first_seen,
+                    MAX(t.created_at) as last_seen
+                FROM word_frequency wf
+                INNER JOIN tweets t ON wf.tweet_id = t.tweet_id
+                WHERE wf.category = ?
+                AND datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
+                GROUP BY wf.word, wf.category
                 ORDER BY count DESC
                 LIMIT ?
             """, (category, hours, limit))
         else:
             cursor.execute("""
                 SELECT
-                    word,
+                    wf.word,
                     COUNT(*) as count,
-                    GROUP_CONCAT(DISTINCT category) as category,
-                    MIN(timestamp) as first_seen,
-                    MAX(timestamp) as last_seen
-                FROM word_frequency
-                WHERE timestamp > datetime('now', '-' || ? || ' hours')
-                GROUP BY word
+                    GROUP_CONCAT(DISTINCT wf.category) as category,
+                    MIN(t.created_at) as first_seen,
+                    MAX(t.created_at) as last_seen
+                FROM word_frequency wf
+                INNER JOIN tweets t ON wf.tweet_id = t.tweet_id
+                WHERE datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
+                GROUP BY wf.word
                 ORDER BY count DESC
                 LIMIT ?
             """, (hours, limit))
@@ -338,7 +368,7 @@ class Database:
                 FROM tweets t
                 JOIN sentiment_analysis s ON t.tweet_id = s.tweet_id
                 WHERE t.category = ?
-                AND t.created_at > datetime('now', '-' || ? || ' hours')
+                AND datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
                 GROUP BY datetime(strftime('%Y-%m-%d %H:00:00', t.created_at)), t.category
                 ORDER BY timestamp
             """, (category, hours))
@@ -350,7 +380,7 @@ class Database:
                     COUNT(*) as tweet_count
                 FROM tweets t
                 JOIN sentiment_analysis s ON t.tweet_id = s.tweet_id
-                WHERE t.created_at > datetime('now', '-' || ? || ' hours')
+                WHERE datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
                 GROUP BY datetime(strftime('%Y-%m-%d %H:00:00', t.created_at))
                 ORDER BY timestamp
             """, (hours,))

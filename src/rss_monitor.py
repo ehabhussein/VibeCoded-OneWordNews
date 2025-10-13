@@ -74,341 +74,341 @@ class RSSFeedConfig:
         },
     }
 
-    # Medium-frequency feeds (check every 5 minutes)
+    # Medium-frequency feeds (check every 2 minutes)
     MEDIUM_PRIORITY_FEEDS = {
         # CNBC
         'cnbc_top': {
             'url': 'https://www.cnbc.com/id/100003114/device/rss/rss.html',
             'category': 'usa_news',
-            'interval': 300
+            'interval': 120
         },
         'cnbc_politics': {
             'url': 'https://www.cnbc.com/id/10000113/device/rss/rss.html',
             'category': 'usa_news',
-            'interval': 300
+            'interval': 120
         },
 
         # The Hill
         'thehill_news': {
             'url': 'https://thehill.com/feed/',
             'category': 'usa_news',
-            'interval': 300
+            'interval': 120
         },
 
         # Wall Street Journal
         'wsj_world': {
             'url': 'https://feeds.a.dj.com/rss/RSSWorldNews.xml',
             'category': 'usa_news',
-            'interval': 300
+            'interval': 120
         },
         'wsj_markets': {
             'url': 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',
             'category': 'markets',
-            'interval': 300
+            'interval': 120
         },
 
         # MarketWatch
         'marketwatch_top': {
             'url': 'http://feeds.marketwatch.com/marketwatch/topstories/',
             'category': 'markets',
-            'interval': 300
+            'interval': 120
         },
 
         # CoinDesk (Crypto)
         'coindesk_news': {
             'url': 'https://www.coindesk.com/arc/outboundfeeds/rss/',
             'category': 'crypto',
-            'interval': 300
+            'interval': 120
         },
 
         # CoinTelegraph
         'cointelegraph': {
             'url': 'https://cointelegraph.com/rss',
             'category': 'crypto',
-            'interval': 300
+            'interval': 120
         },
 
         # Bitcoin Magazine
         'bitcoin_magazine': {
             'url': 'https://bitcoinmagazine.com/.rss/full/',
             'category': 'crypto',
-            'interval': 300
+            'interval': 120
         },
 
         # CryptoSlate
         'cryptoslate': {
             'url': 'https://cryptoslate.com/feed/',
             'category': 'crypto',
-            'interval': 300
+            'interval': 120
         },
 
         # Benzinga Crypto
         'benzinga_crypto': {
             'url': 'https://www.benzinga.com/feed/cryptocurrency',
             'category': 'crypto',
-            'interval': 300
+            'interval': 120
         },
 
         # Investing.com - Commodities Analysis
         'investing_commodities': {
             'url': 'https://www.investing.com/rss/commodities.rss',
             'category': 'commodities',
-            'interval': 300
+            'interval': 120
         },
         'investing_metals': {
             'url': 'https://www.investing.com/rss/commodities_Metals.rss',
             'category': 'commodities',
-            'interval': 300
+            'interval': 120
         },
         'investing_energy': {
             'url': 'https://www.investing.com/rss/commodities_Energy.rss',
             'category': 'commodities',
-            'interval': 300
+            'interval': 120
         },
 
         # Investing.com - News & Markets
         'investing_news': {
             'url': 'https://www.investing.com/rss/news.rss',
             'category': 'markets',
-            'interval': 300
+            'interval': 120
         },
         'investing_stock_news': {
             'url': 'https://www.investing.com/rss/news_285.rss',
             'category': 'markets',
-            'interval': 300
+            'interval': 120
         },
         'investing_forex_news': {
             'url': 'https://www.investing.com/rss/news_1.rss',
             'category': 'markets',
-            'interval': 300
+            'interval': 120
         },
         'investing_crypto_news': {
             'url': 'https://www.investing.com/rss/news_301.rss',
             'category': 'crypto',
-            'interval': 300
+            'interval': 120
         },
         'investing_economy': {
             'url': 'https://www.investing.com/rss/news_95.rss',
             'category': 'usa_news',
-            'interval': 300
+            'interval': 120
         },
     }
 
-    # Low-frequency feeds (check every 10 minutes) - Analysis/Opinion
+    # Low-frequency feeds (check every 2 minutes) - Analysis/Opinion
     LOW_PRIORITY_FEEDS = {
         # BBC
         'bbc_world': {
             'url': 'http://feeds.bbci.co.uk/news/world/rss.xml',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
         'bbc_business': {
             'url': 'http://feeds.bbci.co.uk/news/business/rss.xml',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
         'bbc_us': {
             'url': 'http://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
 
         # NPR
         'npr_news': {
             'url': 'https://feeds.npr.org/1001/rss.xml',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
         'npr_politics': {
             'url': 'https://feeds.npr.org/1014/rss.xml',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
         'npr_business': {
             'url': 'https://feeds.npr.org/1006/rss.xml',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
 
         # New York Times (direct RSS)
         'nyt_world': {
             'url': 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
         'nyt_politics': {
             'url': 'https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
         'nyt_business': {
             'url': 'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
 
         # The Guardian
         'guardian_us': {
             'url': 'https://www.theguardian.com/us-news/rss',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
         'guardian_business': {
             'url': 'https://www.theguardian.com/business/rss',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
         'guardian_world': {
             'url': 'https://www.theguardian.com/world/rss',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
 
         # Washington Post (direct RSS)
         'washingtonpost_politics': {
             'url': 'https://feeds.washingtonpost.com/rss/politics',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
         'washingtonpost_world': {
             'url': 'https://feeds.washingtonpost.com/rss/world',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
         'washingtonpost_business': {
             'url': 'https://feeds.washingtonpost.com/rss/business',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
 
         # USA Today
         'usatoday_news': {
             'url': 'http://rssfeeds.usatoday.com/usatoday-NewsTopStories',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
 
         # ABC News
         'abc_top': {
             'url': 'https://abcnews.go.com/abcnews/topstories',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
         'abc_politics': {
             'url': 'https://abcnews.go.com/abcnews/politicsheadlines',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
 
         # NBC News
         'nbc_top': {
             'url': 'https://feeds.nbcnews.com/nbcnews/public/news',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
         'nbc_politics': {
             'url': 'https://feeds.nbcnews.com/nbcnews/public/politics',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
 
         # CBS News
         'cbs_top': {
             'url': 'https://www.cbsnews.com/latest/rss/main',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
 
         # Financial Times
         'ft_world': {
             'url': 'https://www.ft.com/rss/world',
             'category': 'usa_news',
-            'interval': 600
+            'interval': 120
         },
         'ft_markets': {
             'url': 'https://www.ft.com/rss/markets',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
         'ft_companies': {
             'url': 'https://www.ft.com/rss/companies',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
 
         # Yahoo Finance
         'yahoo_finance': {
             'url': 'https://finance.yahoo.com/news/rssindex',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
 
         # Barron's (updated URL)
         'barrons_market': {
             'url': 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
 
         # Forbes
         'forbes_business': {
             'url': 'https://www.forbes.com/business/feed/',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
 
         # Business Insider
         'businessinsider': {
             'url': 'https://www.businessinsider.com/rss',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
 
         # Seeking Alpha
         'seekingalpha_news': {
             'url': 'https://seekingalpha.com/feed.xml',
             'category': 'markets',
-            'interval': 600
+            'interval': 120
         },
 
         # CryptoNews
         'cryptonews': {
             'url': 'https://cryptonews.com/news/feed/',
             'category': 'crypto',
-            'interval': 600
+            'interval': 120
         },
 
         # Decrypt (Crypto)
         'decrypt_crypto': {
             'url': 'https://decrypt.co/feed',
             'category': 'crypto',
-            'interval': 600
+            'interval': 120
         },
 
         # The Block (Crypto)
         'theblock_crypto': {
             'url': 'https://www.theblockcrypto.com/rss.xml',
             'category': 'crypto',
-            'interval': 600
+            'interval': 120
         },
 
         # Kitco (Gold/Commodities) - Updated URL
         'kitco_news': {
             'url': 'https://www.kitco.com/rss/gold_news.xml',
             'category': 'commodities',
-            'interval': 600
+            'interval': 120
         },
         'kitco_metals': {
             'url': 'https://www.kitco.com/rss/metals.xml',
             'category': 'commodities',
-            'interval': 600
+            'interval': 120
         },
 
         # OilPrice.com
         'oilprice_news': {
             'url': 'https://oilprice.com/rss/main',
             'category': 'commodities',
-            'interval': 600
+            'interval': 120
         },
     }
 

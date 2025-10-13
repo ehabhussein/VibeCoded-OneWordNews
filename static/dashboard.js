@@ -137,7 +137,13 @@ function updateStats(data) {
 // Load tweets
 function loadTweets() {
     const category = currentCategory === 'all' ? '' : currentCategory;
-    const url = category ? `/api/tweets?category=${category}&limit=50` : '/api/tweets?limit=50';
+    // Use current24hTimeRange to filter tweets by time
+    const hours = current24hTimeRange || 24;
+
+    let url = `/api/tweets?hours=${hours}&limit=50`;
+    if (category) {
+        url += `&category=${category}`;
+    }
 
     fetch(url)
         .then(response => response.json())
@@ -423,11 +429,11 @@ function loadSentimentChart() {
         .catch(error => {});
 }
 
-// Load word frequency chart (Top Keywords 24h)
+// Load word frequency chart (Top Keywords with dynamic time range)
 function loadWordFrequencyChart() {
     const category = currentCategory === 'all' ? '' : currentCategory;
-    // Fetch raw data instead of plotly chart
-    const url = category ? `/api/wordcloud?category=${category}&hours=24&limit=100` : '/api/wordcloud?hours=24&limit=100';
+    // Fetch raw data instead of plotly chart - use current time range
+    const url = category ? `/api/wordcloud?category=${category}&hours=${current24hTimeRange}&limit=100` : `/api/wordcloud?hours=${current24hTimeRange}&limit=100`;
 
     fetch(url)
         .then(response => response.json())
@@ -1072,6 +1078,7 @@ let latestKeywordsData = null;
 // View mode for 24h keywords - frequency, timeline, semantic, or category
 let current24hViewMode = 'frequency';
 let latest24hKeywordsData = null;
+let current24hTimeRange = 24; // Default to 24 hours
 
 // Setup view toggle buttons
 document.addEventListener('DOMContentLoaded', function() {
@@ -1114,6 +1121,38 @@ document.addEventListener('DOMContentLoaded', function() {
             if (latest24hKeywordsData) {
                 render24hKeywordsVisualization(latest24hKeywordsData);
             }
+        });
+    });
+
+    // Time Range toggle buttons for Top Keywords
+    const timeRange24hButtons = document.querySelectorAll('.time-range-btn-24h');
+
+    timeRange24hButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons in this group
+            timeRange24hButtons.forEach(btn => btn.classList.remove('active'));
+
+            // Add active class to clicked button
+            this.classList.add('active');
+
+            // Update current time range
+            current24hTimeRange = parseInt(this.dataset.hours);
+
+            // Update the time label in the title
+            const label = document.getElementById('topKeywordsTimeLabel');
+            if (label) {
+                if (current24hTimeRange === 168) {
+                    label.textContent = '(Last Week)';
+                } else if (current24hTimeRange === 24) {
+                    label.textContent = '(Last 24 Hours)';
+                } else if (current24hTimeRange === 2) {
+                    label.textContent = '(Last 2 Hours)';
+                }
+            }
+
+            // Reload data with new time range
+            loadWordFrequencyChart();
+            loadTweets(); // Reload tweets with new time range
         });
     });
 });
@@ -1912,4 +1951,98 @@ function addLatestKeywords(keywords, category) {
 
     // Reload the visualization using debounced function
     debouncedLoadLatestKeywords();
+}
+
+// Crypto Price Predictions
+let currentPredictionTimeframe = '24h';
+
+// Load crypto predictions on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCryptoPredictions();
+    
+    // Setup prediction timeframe buttons
+    const timeframeButtons = document.querySelectorAll('.prediction-timeframe-btn');
+    timeframeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            timeframeButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            currentPredictionTimeframe = this.dataset.timeframe;
+            loadCryptoPredictions();
+        });
+    });
+});
+
+function loadCryptoPredictions() {
+    const container = document.getElementById('cryptoPredictionsContainer');
+    
+    if (!container) return;
+    
+    container.innerHTML = '<p class="text-center text-muted">Loading predictions...</p>';
+    
+    fetch(`/api/crypto/predictions?timeframe=${currentPredictionTimeframe}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.predictions && data.predictions.length > 0) {
+                displayPredictions(data.predictions);
+            } else {
+                container.innerHTML = '<p class="text-center text-muted">No predictions available</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading predictions:', error);
+            container.innerHTML = '<p class="text-center text-danger">Error loading predictions</p>';
+        });
+}
+
+function displayPredictions(predictions) {
+    const container = document.getElementById('cryptoPredictionsContainer');
+    
+    const html = `
+        <div class="row">
+            ${predictions.map(pred => createPredictionCard(pred)).join('')}
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function createPredictionCard(prediction) {
+    const signalClass = prediction.signal.toLowerCase();
+    const emoji = prediction.emoji || '🟡';
+    const confidence = (prediction.confidence * 100).toFixed(0);
+    
+    return `
+        <div class="col-md-4 mb-3">
+            <div class="prediction-card ${signalClass}">
+                <div class="d-flex align-items-center mb-3">
+                    <span class="prediction-emoji">${emoji}</span>
+                    <div class="flex-grow-1">
+                        <h4 class="mb-0">${prediction.symbol}</h4>
+                        <div class="prediction-signal ${signalClass}">${prediction.signal}</div>
+                    </div>
+                </div>
+                
+                <div class="prediction-meta">
+                    <div class="mb-2">
+                        <strong>Confidence:</strong> ${confidence}%
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: ${confidence}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Sentiment Score:</strong> ${prediction.weighted_sentiment.toFixed(2)}
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Articles Analyzed:</strong> ${prediction.article_count}
+                    </div>
+                    
+                    <div class="mt-3" style="font-size: 0.85rem; line-height: 1.4;">
+                        ${prediction.reasoning}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }

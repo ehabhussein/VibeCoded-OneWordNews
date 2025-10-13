@@ -9,6 +9,7 @@ import logging
 import os
 import threading
 from message_queue import MessageQueue
+from crypto_predictor import CryptoPredictor
 
 
 class WebApp:
@@ -18,6 +19,9 @@ class WebApp:
         self.binance_monitor = binance_monitor
         self.rss_monitor = rss_monitor
         self.port = port
+
+        # Initialize crypto predictor
+        self.crypto_predictor = CryptoPredictor(db)
 
         self.app = Flask(__name__,
                          template_folder='../templates',
@@ -69,9 +73,11 @@ class WebApp:
             """Get recent tweets"""
             try:
                 category = request.args.get('category', None)
+                hours = request.args.get('hours', None)
+                hours = int(hours) if hours else None
                 limit = int(request.args.get('limit', 100))
 
-                tweets = self.db.get_recent_tweets(category=category, limit=limit)
+                tweets = self.db.get_recent_tweets(category=category, hours=hours, limit=limit)
                 return jsonify(tweets)
             except Exception as e:
                 self.logger.error(f"Error getting tweets: {e}")
@@ -369,6 +375,49 @@ class WebApp:
 
             except Exception as e:
                 self.logger.error(f"Error creating crypto chart: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/crypto/predictions')
+        def crypto_predictions():
+            """Get crypto price predictions based on sentiment"""
+            try:
+                # Get predictions for major cryptos
+                symbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP']
+                timeframe = request.args.get('timeframe', '6h')
+
+                predictions = self.crypto_predictor.predict_multiple_cryptos(symbols, timeframe)
+
+                return jsonify({
+                    'predictions': predictions,
+                    'generated_at': datetime.now().isoformat(),
+                    'timeframe': timeframe
+                })
+            except Exception as e:
+                self.logger.error(f"Error getting crypto predictions: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/crypto/prediction/<symbol>')
+        def crypto_prediction_single(symbol):
+            """Get price prediction for a specific crypto"""
+            try:
+                timeframe = request.args.get('timeframe', '6h')
+                prediction = self.crypto_predictor.predict_price_movement(symbol, timeframe)
+
+                return jsonify(prediction)
+            except Exception as e:
+                self.logger.error(f"Error getting crypto prediction for {symbol}: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/crypto/sentiment-trend/<symbol>')
+        def crypto_sentiment_trend(symbol):
+            """Get sentiment trend analysis for a crypto"""
+            try:
+                hours = int(request.args.get('hours', 24))
+                trend = self.crypto_predictor.get_sentiment_trend(symbol, hours)
+
+                return jsonify(trend)
+            except Exception as e:
+                self.logger.error(f"Error getting sentiment trend for {symbol}: {e}")
                 return jsonify({'error': str(e)}), 500
 
         @self.app.route('/api/admin/refresh-rss', methods=['POST'])
