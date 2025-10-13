@@ -641,7 +641,7 @@ function showKeywordArticlesModal(keyword) {
                                     <span class="category-badge">${category.toUpperCase()}</span>
                                     <span class="sentiment-badge sentiment-${sentiment.replace('_', '-')}">${sentiment.replace('_', ' ').toUpperCase()}</span>
                                 </div>
-                                <small class="text-muted">${createdAt}</small>
+                                <small style="color: white;">${createdAt}</small>
                             </div>
                             <div class="mb-2">
                                 <strong>@${article.user_handle || 'Unknown'}</strong>
