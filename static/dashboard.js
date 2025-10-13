@@ -628,8 +628,9 @@ function showKeywordArticlesModal(keyword) {
     // Show modal
     modal.show();
 
-    // Fetch articles for this keyword
-    fetch(`/api/keyword/${encodeURIComponent(keyword)}/articles?hours=24&limit=50`)
+    // Fetch articles for this keyword using current time range
+    const hours = current24hTimeRange || 24;
+    fetch(`/api/keyword/${encodeURIComponent(keyword)}/articles?hours=${hours}&limit=50`)
         .then(response => response.json())
         .then(data => {
             if (data.articles && data.articles.length > 0) {
@@ -665,13 +666,27 @@ function showKeywordArticlesModal(keyword) {
                     `;
                 }).join('');
 
+                // Create time range text
+                const hours = current24hTimeRange || 24;
+                let timeText = 'last 24 hours';
+                if (hours === 168) timeText = 'last week';
+                else if (hours === 5) timeText = 'last 5 hours';
+                else if (hours !== 24) timeText = `last ${hours} hours`;
+
                 document.getElementById('keywordArticlesContent').innerHTML = `
-                    <p class="text-muted mb-3">Found ${data.count} articles mentioning "<strong>${keyword}</strong>" in the last 24 hours</p>
+                    <p class="text-muted mb-3">Found ${data.count} articles mentioning "<strong>${keyword}</strong>" in the ${timeText}</p>
                     ${articlesHTML}
                 `;
             } else {
+                // Create time range text for no results message
+                const hours = current24hTimeRange || 24;
+                let timeText = 'last 24 hours';
+                if (hours === 168) timeText = 'last week';
+                else if (hours === 5) timeText = 'last 5 hours';
+                else if (hours !== 24) timeText = `last ${hours} hours`;
+
                 document.getElementById('keywordArticlesContent').innerHTML = `
-                    <p class="text-center text-muted">No articles found for "${keyword}" in the last 24 hours</p>
+                    <p class="text-center text-muted">No articles found for "${keyword}" in the ${timeText}</p>
                 `;
             }
         })
@@ -1082,7 +1097,7 @@ let current24hTimeRange = 24; // Default to 24 hours
 
 // Setup view toggle buttons
 document.addEventListener('DOMContentLoaded', function() {
-    // Toggle buttons for Latest Keywords (2 hours)
+    // Toggle buttons for Latest Keywords (5 hours)
     const viewToggleButtons = document.querySelectorAll('.view-toggle-btn');
 
     viewToggleButtons.forEach(button => {
@@ -1145,8 +1160,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     label.textContent = '(Last Week)';
                 } else if (current24hTimeRange === 24) {
                     label.textContent = '(Last 24 Hours)';
-                } else if (current24hTimeRange === 2) {
-                    label.textContent = '(Last 2 Hours)';
+                } else if (current24hTimeRange === 5) {
+                    label.textContent = '(Last 5 Hours)';
                 }
             }
 
@@ -1159,8 +1174,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function loadLatestKeywords() {
     const category = currentCategory === 'all' ? '' : currentCategory;
-    // Get the most recent keywords (last 2 hours, limit 100)
-    const url = category ? `/api/wordcloud?category=${category}&hours=2&limit=100` : '/api/wordcloud?hours=2&limit=100';
+    // Get the most recent keywords (last 5 hours, limit 100)
+    const url = category ? `/api/wordcloud?category=${category}&hours=5&limit=100` : '/api/wordcloud?hours=5&limit=100';
 
     fetch(url)
         .then(response => response.json())
@@ -1415,7 +1430,7 @@ function createD3NetworkGraph() {
 
     // Fetch source network data
     const category = currentCategory === 'all' ? '' : currentCategory;
-    const url = category ? `/api/source-network?category=${category}&hours=2` : '/api/source-network?hours=2';
+    const url = category ? `/api/source-network?category=${category}&hours=5` : '/api/source-network?hours=5';
 
     // If graph already exists, just update it
     if (currentNetworkSimulation && networkGraphElements) {

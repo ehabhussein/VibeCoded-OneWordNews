@@ -344,7 +344,7 @@ class Database:
             LEFT JOIN sentiment_analysis s ON t.tweet_id = s.tweet_id
             INNER JOIN word_frequency wf ON t.tweet_id = wf.tweet_id
             WHERE LOWER(wf.word) = LOWER(?)
-            AND wf.timestamp > datetime('now', '-' || ? || ' hours')
+            AND datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
             ORDER BY t.created_at DESC
             LIMIT ?
         """, (keyword, hours, limit))
