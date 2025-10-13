@@ -1220,7 +1220,7 @@ function createD3BubbleChart(data) {
         .style('font-weight', '600')
         .text(d => d.word);
 
-    // Add hover effects
+    // Add hover effects and click handler
     bubbles.on('mouseenter', function(event, d) {
         d3.select(this).select('circle')
             .transition()
@@ -1235,8 +1235,12 @@ function createD3BubbleChart(data) {
             .style('opacity', 0.9)
             .attr('stroke-width', 2);
     })
+    .on('click', function(event, d) {
+        showKeywordArticlesModal(d.word);
+    })
+    .style('cursor', 'pointer')
     .append('title')
-        .text(d => `${d.word}: ${d.count} occurrences`);
+        .text(d => `${d.word}: ${d.count} occurrences\n\nClick to see articles`);
 
     // Update positions on each tick of the simulation
     simulation.on('tick', () => {
@@ -1334,7 +1338,7 @@ function createD3Treemap(data) {
             }
         });
 
-    // Add hover effects
+    // Add hover effects and click handler
     cells.on('mouseenter', function(event, d) {
         d3.select(this).select('rect')
             .transition()
@@ -1349,8 +1353,12 @@ function createD3Treemap(data) {
             .style('opacity', 0.9)
             .attr('stroke-width', 2);
     })
+    .on('click', function(event, d) {
+        showKeywordArticlesModal(d.data.name);
+    })
+    .style('cursor', 'pointer')
     .append('title')
-        .text(d => `${d.data.name}: ${d.value} occurrences`);
+        .text(d => `${d.data.name}: ${d.value} occurrences\n\nClick to see articles`);
 
     // Update container height
     container.style.height = height + 'px';

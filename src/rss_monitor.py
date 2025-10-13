@@ -534,9 +534,6 @@ class RSSMonitor:
             if article_id in self.seen_articles:
                 return
 
-            # Mark as seen
-            self.seen_articles.add(article_id)
-
             # Extract article data
             title = self._clean_html(entry.get('title', ''))
             link = entry.get('link', '').strip()
@@ -550,6 +547,16 @@ class RSSMonitor:
                 published = datetime(*entry.updated_parsed[:6])
             else:
                 published = datetime.now()
+
+            # ⚠️ FILTER: Only process articles from the last 24 hours
+            now = datetime.now()
+            time_diff = now - published
+            if time_diff.total_seconds() > 86400:  # 86400 seconds = 24 hours
+                self.logger.debug(f"Skipping old article (published {time_diff} ago): {title[:50]}")
+                return
+
+            # Mark as seen AFTER time check (don't mark old articles as seen)
+            self.seen_articles.add(article_id)
 
             # Combine title and summary for analysis
             full_text = f"{title}. {summary}" if summary else title
