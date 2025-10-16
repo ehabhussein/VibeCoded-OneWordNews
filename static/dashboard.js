@@ -183,6 +183,7 @@ function createTweetCard(tweet) {
     const userHandle = tweet.user_handle || 'Unknown';
     const text = tweet.text || '';
     const createdAt = new Date(tweet.created_at).toLocaleString();
+    const articleUrl = tweet.url || '';
 
     return `
         <div class="tweet-card">
@@ -199,10 +200,11 @@ function createTweetCard(tweet) {
             <p class="mb-2">${escapeHtml(text)}</p>
             <div class="d-flex justify-content-between align-items-center">
                 <small class="text-muted">Sentiment Score: ${sentimentScore.toFixed(2)}</small>
-                <div>
+                <div class="d-flex align-items-center">
                     <small class="text-muted me-3">❤️ ${tweet.like_count || 0}</small>
                     <small class="text-muted me-3">🔄 ${tweet.retweet_count || 0}</small>
-                    <small class="text-muted">💬 ${tweet.reply_count || 0}</small>
+                    <small class="text-muted me-3">💬 ${tweet.reply_count || 0}</small>
+                    ${articleUrl ? `<a href="${articleUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">Open Article</a>` : ''}
                 </div>
             </div>
         </div>
@@ -1014,6 +1016,7 @@ function showKeywordArticlesModal(keyword) {
                     const sentimentScore = article.sentiment_score || 0;
                     const category = article.category || 'general';
                     const createdAt = new Date(article.created_at).toLocaleString();
+                    const articleUrl = article.url || '';
 
                     return `
                         <div class="tweet-card mb-3">
@@ -1030,10 +1033,11 @@ function showKeywordArticlesModal(keyword) {
                             <p class="mb-2">${escapeHtml(article.text)}</p>
                             <div class="d-flex justify-content-between align-items-center">
                                 <small class="text-muted">Sentiment: ${sentimentScore.toFixed(2)}</small>
-                                <div>
+                                <div class="d-flex align-items-center">
                                     <small class="text-muted me-3">❤️ ${article.like_count || 0}</small>
                                     <small class="text-muted me-3">🔄 ${article.retweet_count || 0}</small>
-                                    <small class="text-muted">💬 ${article.reply_count || 0}</small>
+                                    <small class="text-muted me-3">💬 ${article.reply_count || 0}</small>
+                                    ${articleUrl ? `<a href="${articleUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">Open Article</a>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -1120,6 +1124,7 @@ function showEntityArticlesModal(entityText) {
                     const sentimentScore = article.sentiment_score || 0;
                     const category = article.category || 'general';
                     const createdAt = new Date(article.created_at).toLocaleString();
+                    const articleUrl = article.url || '';
 
                     return `
                         <div class="tweet-card mb-3">
@@ -1136,6 +1141,7 @@ function showEntityArticlesModal(entityText) {
                             <p class="mb-2">${escapeHtml(article.text)}</p>
                             <div class="d-flex justify-content-between align-items-center">
                                 <small class="text-muted">Sentiment: ${sentimentScore.toFixed(2)}</small>
+                                ${articleUrl ? `<a href="${articleUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">Open Article</a>` : ''}
                             </div>
                         </div>
                     `;
@@ -2624,6 +2630,7 @@ function showCryptoArticlesModal(prediction) {
                     const sentimentScore = article.sentiment_score || 0;
                     const category = article.category || 'general';
                     const createdAt = new Date(article.created_at).toLocaleString();
+                    const articleUrl = article.url || '';
 
                     return `
                         <div class="tweet-card mb-3">
@@ -2640,10 +2647,11 @@ function showCryptoArticlesModal(prediction) {
                             <p class="mb-2">${escapeHtml(article.text)}</p>
                             <div class="d-flex justify-content-between align-items-center">
                                 <small class="text-muted">Sentiment: ${sentimentScore.toFixed(2)}</small>
-                                <div>
+                                <div class="d-flex align-items-center">
                                     <small class="text-muted me-3">❤️ ${article.like_count || 0}</small>
                                     <small class="text-muted me-3">🔄 ${article.retweet_count || 0}</small>
-                                    <small class="text-muted">💬 ${article.reply_count || 0}</small>
+                                    <small class="text-muted me-3">💬 ${article.reply_count || 0}</small>
+                                    ${articleUrl ? `<a href="${articleUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">Open Article</a>` : ''}
                                 </div>
                             </div>
                         </div>

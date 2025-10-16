@@ -209,7 +209,8 @@ class OneWordNews:
                 'retweet_count': 0,
                 'like_count': 0,
                 'reply_count': 0,
-                'category': category
+                'category': category,
+                'url': article_data.get('link', '')
             }
 
             # Save to database

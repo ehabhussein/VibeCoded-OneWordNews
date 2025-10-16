@@ -45,6 +45,7 @@ class Database:
                 like_count INTEGER DEFAULT 0,
                 reply_count INTEGER DEFAULT 0,
                 category TEXT,
+                url TEXT,
                 raw_data TEXT,
                 processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -157,6 +158,12 @@ class Database:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_entities_label ON entities(entity_label)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_entities_created_at ON entities(created_at)")
 
+        # Migration: Add url column to existing tweets table if it doesn't exist
+        cursor.execute("PRAGMA table_info(tweets)")
+        columns = [column[1] for column in cursor.fetchall()]
+        if 'url' not in columns:
+            cursor.execute("ALTER TABLE tweets ADD COLUMN url TEXT")
+
         conn.commit()
         conn.close()
 
@@ -169,8 +176,8 @@ class Database:
             cursor.execute("""
                 INSERT OR IGNORE INTO tweets
                 (tweet_id, user_handle, user_name, text, created_at, retweet_count,
-                 like_count, reply_count, category, raw_data)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 like_count, reply_count, category, url, raw_data)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 tweet_data.get('tweet_id'),
                 tweet_data.get('user_handle'),
@@ -181,6 +188,7 @@ class Database:
                 tweet_data.get('like_count', 0),
                 tweet_data.get('reply_count', 0),
                 tweet_data.get('category'),
+                tweet_data.get('url', ''),
                 json.dumps(tweet_data.get('raw_data', {}))
             ))
 
@@ -378,6 +386,7 @@ class Database:
                 t.like_count,
                 t.reply_count,
                 t.category,
+                t.url,
                 s.sentiment_score,
                 s.sentiment_label,
                 wf.word
@@ -424,6 +433,7 @@ class Database:
                 t.like_count,
                 t.reply_count,
                 t.category,
+                t.url,
                 s.sentiment_score,
                 s.sentiment_label
             FROM tweets t
@@ -791,6 +801,7 @@ class Database:
                 t.tweet_id,
                 t.text,
                 t.user_handle as source,
+                t.url,
                 t.created_at,
                 t.category,
                 s.sentiment_score,
