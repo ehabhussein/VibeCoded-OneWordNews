@@ -8,7 +8,7 @@
 
 Skip the noise. See the **one word** (or entity) that's moving markets: Is "Bitcoin" connected to "regulation"? Is "Fed" trending with "rate cuts"? Are people talking about "Trump" or "Powell"?
 
-**Real-time intelligence** through AI-powered entity recognition, sentiment analysis, and interactive network graphs that reveal hidden connections between news, entities, and keywords - all updating live as breaking news hits.
+**Real-time intelligence** through spaCy entity recognition, FinBERT financial sentiment analysis, and interactive network graphs that reveal hidden connections between news, entities, and keywords - all updating live as breaking news hits.
 
 ## Demo Video
 
@@ -21,7 +21,7 @@ Skip the noise. See the **one word** (or entity) that's moving markets: Is "Bitc
 ### Core Intelligence
 - 📰 **87 RSS News Feeds** - Real-time monitoring from Reuters, Bloomberg, CNBC, CoinDesk, Cointelegraph, NYT, BBC, and 80+ more sources
 - 🤖 **AI Entity Recognition (spaCy NER)** - Extracts people, organizations, locations with context-aware classification
-- 📊 **BERT Sentiment Analysis** - Advanced sentiment scoring (-1 to +1) for all articles
+- 📊 **FinBERT Sentiment Analysis** - Financial-specific AI model trained on market news with context-aware adjustments
 - 💰 **Live Crypto Prices** - Binance WebSocket integration for BTC, ETH, SOL, TRUMP, and 7 more
 
 ### Visualizations
@@ -65,7 +65,7 @@ Skip the noise. See the **one word** (or entity) that's moving markets: Is "Bitc
 
 2. **Create `.env` file**
    ```bash
-   cp env.example .env
+   cp .env.example .env
    ```
 
 3. **Configure environment variables** in `.env`:
@@ -269,7 +269,7 @@ OneWordNews/
 - **Flask** - Web framework
 - **Flask-SocketIO** - WebSocket support for real-time updates
 - **spaCy** (en_core_web_sm) - Named Entity Recognition (NER)
-- **Transformers (BERT)** - Sentiment analysis
+- **FinBERT** (ProsusAI/finbert) - Financial sentiment analysis specifically trained on market news
 - **Feedparser** - RSS feed parsing
 - **Redis** - Pub/sub messaging for real-time communication between workers and web clients
 - **SQLite** - Data storage with WAL mode
@@ -412,10 +412,12 @@ The container uses `host.docker.internal` to access Ollama running on your host 
 - **Real-time updates**: WebSocket integration for live data updates
 
 ### Sentiment Analysis
-- **BERT-based** using `distilbert-base-uncased-finetuned-sst-2-english`
+- **FinBERT** (`ProsusAI/finbert`) - Specifically trained on financial news and market sentiment
+- Much more accurate for news, markets, crypto, commodities, and economic content
+- Enhanced with market context adjustment (detects keywords like "crash", "rally", "recession")
 - Scores range from -1 (very negative) to +1 (very positive)
 - Runs on CPU (no GPU required)
-- Cached in SQLite for performance
+- Cached locally in `/app/data/models` for fast loading
 
 ### Redis Pub/Sub Architecture
 OneWordNews uses **Redis as a message broker** to enable real-time communication between background workers and web clients:
