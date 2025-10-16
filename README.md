@@ -4,7 +4,11 @@
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Real-time news intelligence platform with AI-powered entity recognition, sentiment analysis, crypto price tracking, and interactive network visualizations.
+**Why OneWordNews?** Traditional news requires reading hundreds of articles to understand market trends. OneWordNews distills 87 news sources into **visual patterns, key entities, and trending keywords** - letting you see what matters in seconds, not hours.
+
+Skip the noise. See the **one word** (or entity) that's moving markets: Is "Bitcoin" connected to "regulation"? Is "Fed" trending with "rate cuts"? Are people talking about "Trump" or "Powell"?
+
+**Real-time intelligence** through AI-powered entity recognition, sentiment analysis, and interactive network graphs that reveal hidden connections between news, entities, and keywords - all updating live as breaking news hits.
 
 ## Demo Video
 
