@@ -164,24 +164,44 @@ Real-time news intelligence platform with AI-powered entity recognition, sentime
 
 BTC, ETH, SOL, TRUMP, PEPE, DOGE, ANIME, PAXG, ADA, SUI, WLFI
 
-### RSS News Sources
+### RSS News Sources (87 Total)
 
-**Crypto News:**
-- CoinDesk
-- Crypto Briefing
-- Bitcoinist
-- U.Today
-- The Block
-- Bitcoin.com
+**Crypto News (15 sources):**
+- CoinDesk, Cointelegraph, The Block, Crypto.news, Crypto Briefing
+- Bitcoinist, U.Today, Decrypt, Cryptonews, BeInCrypto
+- Bitcoin.com, CoinMarketCap, Reuters Crypto, InvestingLive, Kitco Gold
 
-**Forex & Markets:**
-- Investing.com
-- DailyFX
-- FXStreet
-- ForexLive
+**Forex & Commodities (10 sources):**
+- Investing.com (News, Forex, Stocks, Crypto, Economics - 5 feeds)
+- DailyFX, FXStreet, OilPrice, Natural Gas Intel, Kitco Gold
 
-**Political & Economy:**
-- CNBC (Market news)
+**Major News Networks (30+ sources):**
+- **Reuters** (World, Politics, Top News)
+- **Bloomberg** (Politics, Markets)
+- **CNBC** (Politics, Market Insider)
+- **BBC** (World, Business, US/Canada)
+- **NPR** (News, Politics, Business)
+- **New York Times** (World, Politics, Business)
+- **The Guardian** (US, Business, World)
+- **Washington Post** (Politics, World, Business)
+- **Associated Press** (Top, US, World, Business)
+- **NBC News** (News, Politics)
+- **CBS News** (Main, Politics)
+- **ABC News** (Top Stories, Politics)
+- **Fox News** (Politics)
+- **CNN** (All Politics)
+
+**Financial & Business (15+ sources):**
+- Wall Street Journal (World, Markets - 2 feeds)
+- Financial Times (World, Markets, Companies)
+- MarketWatch, Yahoo Finance, Forbes, Business Insider, Seeking Alpha
+- The Economist, LA Times Business, Politico, The Hill
+
+**International (8 sources):**
+- Al Jazeera, France 24, Sky News, Politico EU
+- USA Today, Axios, Newsweek, Time, The Atlantic
+
+**Total: 87 active RSS feeds monitoring crypto, forex, markets, politics, and commodities**
 
 ## Troubleshooting
 
