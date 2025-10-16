@@ -65,7 +65,7 @@ Skip the noise. See the **one word** (or entity) that's moving markets: Is "Bitc
 
 2. **Create `.env` file**
    ```bash
-   cp .env.example .env
+   cp env.example .env
    ```
 
 3. **Configure environment variables** in `.env`:
