@@ -53,7 +53,10 @@ Real-time news intelligence platform with AI-powered entity recognition, sentime
 
 1. **Clone the repository**
    ```bash
-   cd D:\Repositories\OneWordNews
+   mkdir OneWordNews
+   cd OneWordNews
+   git clone https://github.com/ehabhussein/VibeCoded-OneWordNews.git
+   cd VibeCoded-OneWordNews
    ```
 
 2. **Create `.env` file**
