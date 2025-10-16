@@ -421,6 +421,12 @@
             <div class="col-md-4">
                 <div class="chart-container">
                     <h5 class="mb-3">Admin Controls</h5>
+                    <a href="/search" class="btn btn-success btn-sm me-2" title="Advanced search and analysis">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
+                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                        </svg>
+                        Search
+                    </a>
                     <button class="btn btn-primary btn-sm me-2" id="refreshRssBtn" title="Force refresh all RSS feeds">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
                             <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
@@ -470,8 +476,26 @@
                                 <button type="button" class="time-range-btn-24h active" data-hours="24" title="Last 24 hours">
                                     24h
                                 </button>
+                                <button type="button" class="time-range-btn-24h" data-hours="12" title="Last 12 hours">
+                                    12h
+                                </button>
+                                <button type="button" class="time-range-btn-24h" data-hours="6" title="Last 6 hours">
+                                    6h
+                                </button>
                                 <button type="button" class="time-range-btn-24h" data-hours="5" title="Last 5 hours">
                                     5h
+                                </button>
+                                <button type="button" class="time-range-btn-24h" data-hours="4" title="Last 4 hours">
+                                    4h
+                                </button>
+                                <button type="button" class="time-range-btn-24h" data-hours="3" title="Last 3 hours">
+                                    3h
+                                </button>
+                                <button type="button" class="time-range-btn-24h" data-hours="2" title="Last 2 hours">
+                                    2h
+                                </button>
+                                <button type="button" class="time-range-btn-24h" data-hours="1" title="Last 1 hour">
+                                    1h
                                 </button>
                             </div>
                             <!-- View Mode Toggles -->
@@ -558,7 +582,13 @@
                         <div class="btn-group btn-group-sm" role="group">
                             <button type="button" class="btn btn-outline-primary prediction-timeframe-btn" data-timeframe="168h">Week</button>
                             <button type="button" class="btn btn-outline-primary prediction-timeframe-btn active" data-timeframe="24h">24h</button>
+                            <button type="button" class="btn btn-outline-primary prediction-timeframe-btn" data-timeframe="12h">12h</button>
+                            <button type="button" class="btn btn-outline-primary prediction-timeframe-btn" data-timeframe="6h">6h</button>
                             <button type="button" class="btn btn-outline-primary prediction-timeframe-btn" data-timeframe="5h">5h</button>
+                            <button type="button" class="btn btn-outline-primary prediction-timeframe-btn" data-timeframe="4h">4h</button>
+                            <button type="button" class="btn btn-outline-primary prediction-timeframe-btn" data-timeframe="3h">3h</button>
+                            <button type="button" class="btn btn-outline-primary prediction-timeframe-btn" data-timeframe="2h">2h</button>
+                            <button type="button" class="btn btn-outline-primary prediction-timeframe-btn" data-timeframe="1h">1h</button>
                         </div>
                     </div>
                     <div id="cryptoPredictionsContainer" style="min-height: 300px;">

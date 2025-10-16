@@ -54,12 +54,6 @@ class RSSFeedConfig:
             'interval': 120
         },
 
-        # Associated Press
-        'ap_top': {
-            'url': 'https://rss.app/feeds/BxW0gCTQvLjNHvnQ.xml',
-            'category': 'usa_news',
-            'interval': 120
-        },
 
         # Bloomberg
         'bloomberg_politics': {
@@ -128,26 +122,6 @@ class RSSFeedConfig:
             'interval': 120
         },
 
-        # Bitcoin Magazine
-        'bitcoin_magazine': {
-            'url': 'https://bitcoinmagazine.com/.rss/full/',
-            'category': 'crypto',
-            'interval': 120
-        },
-
-        # CryptoSlate
-        'cryptoslate': {
-            'url': 'https://cryptoslate.com/feed/',
-            'category': 'crypto',
-            'interval': 120
-        },
-
-        # Benzinga Crypto
-        'benzinga_crypto': {
-            'url': 'https://www.benzinga.com/feed/cryptocurrency',
-            'category': 'crypto',
-            'interval': 120
-        },
 
         # Investing.com - Commodities Analysis
         'investing_commodities': {
@@ -385,24 +359,69 @@ class RSSFeedConfig:
             'interval': 120
         },
 
-        # The Block (Crypto)
+        # The Block (Crypto) - Updated URL
         'theblock_crypto': {
-            'url': 'https://www.theblockcrypto.com/rss.xml',
+            'url': 'https://www.theblock.co/rss.xml',
             'category': 'crypto',
             'interval': 120
         },
 
-        # Kitco (Gold/Commodities) - Updated URL
-        'kitco_news': {
-            'url': 'https://www.kitco.com/rss/gold_news.xml',
-            'category': 'commodities',
+        # Crypto.news (Comprehensive crypto coverage)
+        'crypto_news': {
+            'url': 'https://crypto.news/feed',
+            'category': 'crypto',
             'interval': 120
         },
-        'kitco_metals': {
-            'url': 'https://www.kitco.com/rss/metals.xml',
-            'category': 'commodities',
+
+        # Crypto Briefing
+        'crypto_briefing': {
+            'url': 'https://cryptobriefing.com/feed',
+            'category': 'crypto',
             'interval': 120
         },
+
+        # Bitcoinist
+        'bitcoinist': {
+            'url': 'https://bitcoinist.com/feed',
+            'category': 'crypto',
+            'interval': 120
+        },
+
+        # U.Today (Crypto news)
+        'utoday_crypto': {
+            'url': 'https://u.today/rss',
+            'category': 'crypto',
+            'interval': 120
+        },
+
+        # ForexLive/InvestingLive (Real-time forex & markets)
+        'investinglive': {
+            'url': 'https://investinglive.com/feed',
+            'category': 'markets',
+            'interval': 120
+        },
+
+        # Sky News World
+        'skynews_world': {
+            'url': 'https://feeds.skynews.com/feeds/rss/world.xml',
+            'category': 'usa_news',
+            'interval': 120
+        },
+
+        # Al Jazeera
+        'aljazeera': {
+            'url': 'https://www.aljazeera.com/xml/rss/all.xml',
+            'category': 'usa_news',
+            'interval': 120
+        },
+
+        # France 24
+        'france24': {
+            'url': 'https://www.france24.com/en/rss',
+            'category': 'usa_news',
+            'interval': 120
+        },
+
 
         # OilPrice.com
         'oilprice_news': {

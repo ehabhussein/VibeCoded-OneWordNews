@@ -670,8 +670,15 @@ function showKeywordArticlesModal(keyword) {
                 const hours = current24hTimeRange || 24;
                 let timeText = 'last 24 hours';
                 if (hours === 168) timeText = 'last week';
+                else if (hours === 24) timeText = 'last 24 hours';
+                else if (hours === 12) timeText = 'last 12 hours';
+                else if (hours === 6) timeText = 'last 6 hours';
                 else if (hours === 5) timeText = 'last 5 hours';
-                else if (hours !== 24) timeText = `last ${hours} hours`;
+                else if (hours === 4) timeText = 'last 4 hours';
+                else if (hours === 3) timeText = 'last 3 hours';
+                else if (hours === 2) timeText = 'last 2 hours';
+                else if (hours === 1) timeText = 'last hour';
+                else timeText = `last ${hours} hours`;
 
                 document.getElementById('keywordArticlesContent').innerHTML = `
                     <p class="text-muted mb-3">Found ${data.count} articles mentioning "<strong>${keyword}</strong>" in the ${timeText}</p>
@@ -682,8 +689,15 @@ function showKeywordArticlesModal(keyword) {
                 const hours = current24hTimeRange || 24;
                 let timeText = 'last 24 hours';
                 if (hours === 168) timeText = 'last week';
+                else if (hours === 24) timeText = 'last 24 hours';
+                else if (hours === 12) timeText = 'last 12 hours';
+                else if (hours === 6) timeText = 'last 6 hours';
                 else if (hours === 5) timeText = 'last 5 hours';
-                else if (hours !== 24) timeText = `last ${hours} hours`;
+                else if (hours === 4) timeText = 'last 4 hours';
+                else if (hours === 3) timeText = 'last 3 hours';
+                else if (hours === 2) timeText = 'last 2 hours';
+                else if (hours === 1) timeText = 'last hour';
+                else timeText = `last ${hours} hours`;
 
                 document.getElementById('keywordArticlesContent').innerHTML = `
                     <p class="text-center text-muted">No articles found for "${keyword}" in the ${timeText}</p>
@@ -1160,8 +1174,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     label.textContent = '(Last Week)';
                 } else if (current24hTimeRange === 24) {
                     label.textContent = '(Last 24 Hours)';
+                } else if (current24hTimeRange === 12) {
+                    label.textContent = '(Last 12 Hours)';
+                } else if (current24hTimeRange === 6) {
+                    label.textContent = '(Last 6 Hours)';
                 } else if (current24hTimeRange === 5) {
                     label.textContent = '(Last 5 Hours)';
+                } else if (current24hTimeRange === 4) {
+                    label.textContent = '(Last 4 Hours)';
+                } else if (current24hTimeRange === 3) {
+                    label.textContent = '(Last 3 Hours)';
+                } else if (current24hTimeRange === 2) {
+                    label.textContent = '(Last 2 Hours)';
+                } else if (current24hTimeRange === 1) {
+                    label.textContent = '(Last Hour)';
                 }
             }
 
@@ -2133,7 +2159,13 @@ function showCryptoArticlesModal(prediction) {
 
                 const timeText = timeframeHours === 168 ? 'last week' :
                                 timeframeHours === 24 ? 'last 24 hours' :
+                                timeframeHours === 12 ? 'last 12 hours' :
+                                timeframeHours === 6 ? 'last 6 hours' :
                                 timeframeHours === 5 ? 'last 5 hours' :
+                                timeframeHours === 4 ? 'last 4 hours' :
+                                timeframeHours === 3 ? 'last 3 hours' :
+                                timeframeHours === 2 ? 'last 2 hours' :
+                                timeframeHours === 1 ? 'last hour' :
                                 `last ${timeframeHours} hours`;
 
                 document.getElementById('keywordArticlesContent').innerHTML = `
@@ -2160,7 +2192,13 @@ function showCryptoArticlesModal(prediction) {
             } else {
                 const timeText = timeframeHours === 168 ? 'last week' :
                                 timeframeHours === 24 ? 'last 24 hours' :
+                                timeframeHours === 12 ? 'last 12 hours' :
+                                timeframeHours === 6 ? 'last 6 hours' :
                                 timeframeHours === 5 ? 'last 5 hours' :
+                                timeframeHours === 4 ? 'last 4 hours' :
+                                timeframeHours === 3 ? 'last 3 hours' :
+                                timeframeHours === 2 ? 'last 2 hours' :
+                                timeframeHours === 1 ? 'last hour' :
                                 `last ${timeframeHours} hours`;
 
                 document.getElementById('keywordArticlesContent').innerHTML = `

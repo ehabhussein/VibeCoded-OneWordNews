@@ -353,6 +353,78 @@ class Database:
         conn.close()
         return results
 
+    def search_articles(self, query: str, category: str = None, hours: int = 24,
+                       sentiment_filter: str = None, limit: int = 100) -> List[Dict]:
+        """Advanced search for articles with multiple filters
+
+        Args:
+            query: Search query (searches in text and keywords)
+            category: Filter by category (optional)
+            hours: Time range in hours
+            sentiment_filter: Filter by sentiment (positive/neutral/negative)
+            limit: Maximum results
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        # Build the query based on filters
+        query_parts = []
+        params = []
+
+        # Base query
+        base_query = """
+            SELECT DISTINCT
+                t.tweet_id,
+                t.user_handle,
+                t.user_name,
+                t.text,
+                t.created_at,
+                t.retweet_count,
+                t.like_count,
+                t.reply_count,
+                t.category,
+                s.sentiment_score,
+                s.sentiment_label
+            FROM tweets t
+            LEFT JOIN sentiment_analysis s ON t.tweet_id = s.tweet_id
+            LEFT JOIN word_frequency wf ON t.tweet_id = wf.tweet_id
+            WHERE 1=1
+        """
+
+        # Time filter
+        if hours:
+            query_parts.append("AND datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')")
+            params.append(hours)
+
+        # Search query filter
+        if query:
+            query_parts.append("AND (LOWER(t.text) LIKE LOWER(?) OR LOWER(wf.word) LIKE LOWER(?))")
+            params.append(f'%{query}%')
+            params.append(f'%{query}%')
+
+        # Category filter
+        if category:
+            query_parts.append("AND t.category = ?")
+            params.append(category)
+
+        # Sentiment filter
+        if sentiment_filter:
+            if sentiment_filter == 'positive':
+                query_parts.append("AND s.sentiment_score > 0.1")
+            elif sentiment_filter == 'negative':
+                query_parts.append("AND s.sentiment_score < -0.1")
+            elif sentiment_filter == 'neutral':
+                query_parts.append("AND s.sentiment_score BETWEEN -0.1 AND 0.1")
+
+        # Combine query
+        full_query = base_query + ' ' + ' '.join(query_parts) + ' ORDER BY t.created_at DESC LIMIT ?'
+        params.append(limit)
+
+        cursor.execute(full_query, params)
+        results = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return results
+
     def get_sentiment_time_series(self, category: str = None, hours: int = 24) -> List[Dict]:
         """Get sentiment time series data"""
         conn = self.get_connection()

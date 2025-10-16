@@ -58,6 +58,11 @@ class WebApp:
             """Main dashboard"""
             return render_template('dashboard.html')
 
+        @self.app.route('/search')
+        def search_page():
+            """Advanced search and analysis page"""
+            return render_template('search.html')
+
         @self.app.route('/api/stats')
         def get_stats():
             """Get dashboard statistics"""
@@ -479,6 +484,76 @@ class WebApp:
                 })
             except Exception as e:
                 self.logger.error(f"Error getting keyword articles: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/search')
+        def advanced_search():
+            """Advanced search with multiple filters"""
+            try:
+                query = request.args.get('q', '')
+                category = request.args.get('category', None)
+                if category == 'all':
+                    category = None
+                hours = int(request.args.get('hours', 24))
+                sentiment = request.args.get('sentiment', None)
+                if sentiment == 'all':
+                    sentiment = None
+                sort_by = request.args.get('sort', 'relevance')
+                limit = int(request.args.get('limit', 100))
+
+                # Search articles
+                articles = self.db.search_articles(
+                    query=query,
+                    category=category,
+                    hours=hours,
+                    sentiment_filter=sentiment,
+                    limit=limit
+                )
+
+                # Calculate analytics
+                if articles:
+                    sentiments = [a.get('sentiment_score', 0) for a in articles if a.get('sentiment_score') is not None]
+                    avg_sentiment = sum(sentiments) / len(sentiments) if sentiments else 0
+
+                    sources = set([a.get('user_handle') for a in articles if a.get('user_handle')])
+                    unique_sources = len(sources)
+
+                    # Get time span
+                    timestamps = [a.get('created_at') for a in articles if a.get('created_at')]
+                    time_span = 'N/A'
+                    if timestamps:
+                        try:
+                            first = min(timestamps)
+                            last = max(timestamps)
+                            first_dt = datetime.fromisoformat(first) if isinstance(first, str) else first
+                            last_dt = datetime.fromisoformat(last) if isinstance(last, str) else last
+                            diff = last_dt - first_dt
+                            hours_span = diff.total_seconds() / 3600
+                            if hours_span < 1:
+                                time_span = f"{int(diff.total_seconds() / 60)}m"
+                            elif hours_span < 24:
+                                time_span = f"{int(hours_span)}h"
+                            else:
+                                time_span = f"{int(hours_span / 24)}d"
+                        except:
+                            pass
+                else:
+                    avg_sentiment = 0
+                    unique_sources = 0
+                    time_span = 'N/A'
+
+                return jsonify({
+                    'query': query,
+                    'total': len(articles),
+                    'articles': articles,
+                    'analytics': {
+                        'avg_sentiment': round(avg_sentiment, 2),
+                        'unique_sources': unique_sources,
+                        'time_span': time_span
+                    }
+                })
+            except Exception as e:
+                self.logger.error(f"Error in advanced search: {e}")
                 return jsonify({'error': str(e)}), 500
 
         @self.app.route('/api/source-network')

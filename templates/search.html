@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced News Search & Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            background-color: #0f1419;
+            color: #e7e9ea;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1da1f2 0%, #0c7abf 100%);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .search-container {
+            background: #16181c;
+            border: 1px solid #2f3336;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background: #16181c;
+            border: 1px solid #2f3336;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            background: #0f1419;
+            border: 2px solid #2f3336;
+            color: #e7e9ea;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            border-radius: 25px;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            background: #16181c;
+            border-color: #1da1f2;
+            color: #e7e9ea;
+            box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.2);
+            outline: none;
+        }
+
+        .search-btn {
+            background: #1da1f2;
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .search-btn:hover {
+            background: #0c7abf;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(29, 161, 242, 0.4);
+        }
+
+        .filter-section {
+            background: #0f1419;
+            border: 1px solid #2f3336;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .filter-chip {
+            background: #16181c;
+            border: 1px solid #2f3336;
+            color: #8b98a5;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+
+        .filter-chip:hover, .filter-chip.active {
+            background: #1da1f2;
+            border-color: #1da1f2;
+            color: white;
+        }
+
+        .article-card {
+            background: #16181c;
+            border: 1px solid #2f3336;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .article-card:hover {
+            border-color: #1da1f2;
+            box-shadow: 0 4px 12px rgba(29, 161, 242, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .sentiment-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .sentiment-very-positive { background: #17bf63; color: white; }
+        .sentiment-positive { background: #1d9bf0; color: white; }
+        .sentiment-neutral { background: #536471; color: white; }
+        .sentiment-negative { background: #f91880; color: white; }
+        .sentiment-very-negative { background: #dc3545; color: white; }
+
+        .category-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            background: #1da1f2;
+            color: white;
+            margin-right: 5px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #1da1f2 0%, #0c7abf 100%);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-box h3 {
+            font-size: 2.5rem;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .stat-box p {
+            margin: 5px 0 0 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .timeline-item {
+            border-left: 3px solid #1da1f2;
+            padding-left: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -7px;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #1da1f2;
+        }
+
+        .keyword-network-node {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .keyword-network-node:hover {
+            opacity: 0.7;
+        }
+
+        .source-badge {
+            background: #2f3336;
+            color: #8b98a5;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-right: 5px;
+            display: inline-block;
+        }
+
+        .date-range-input {
+            background: #0f1419;
+            border: 1px solid #2f3336;
+            color: #e7e9ea;
+            padding: 8px 12px;
+            border-radius: 5px;
+        }
+
+        .date-range-input:focus {
+            border-color: #1da1f2;
+            outline: none;
+        }
+
+        .back-link {
+            color: #1da1f2;
+            text-decoration: none;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .back-link:hover {
+            color: #0c7abf;
+            text-decoration: underline;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8b98a5;
+        }
+
+        .no-results svg {
+            width: 100px;
+            height: 100px;
+            opacity: 0.3;
+            margin-bottom: 20px;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .related-keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .related-keyword {
+            background: #2f3336;
+            color: #1da1f2;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .related-keyword:hover {
+            background: #1da1f2;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid p-4">
+        <!-- Header -->
+        <div class="header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-1">Advanced News Search & Analysis</h1>
+                    <p class="mb-0">Deep dive into news topics with sentiment analysis, timeline tracking, and network visualization</p>
+                </div>
+                <a href="/" class="btn btn-light">Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Search Container -->
+        <div class="search-container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control search-input" id="searchInput"
+                               placeholder="Search for keywords, topics, or news events..."
+                               autocomplete="off">
+                        <button class="btn search-btn" type="button" id="searchBtn">
+                            <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 8px;">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                            </svg>
+                            Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Filters -->
+            <div class="filter-section">
+                <h6 class="mb-3">Filters</h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label text-muted">Time Range</label>
+                        <div>
+                            <div class="filter-chip" data-filter-type="time" data-value="168">Week</div>
+                            <div class="filter-chip active" data-filter-type="time" data-value="24">24h</div>
+                            <div class="filter-chip" data-filter-type="time" data-value="12">12h</div>
+                            <div class="filter-chip" data-filter-type="time" data-value="6">6h</div>
+                            <div class="filter-chip" data-filter-type="time" data-value="5">5h</div>
+                            <div class="filter-chip" data-filter-type="time" data-value="4">4h</div>
+                            <div class="filter-chip" data-filter-type="time" data-value="3">3h</div>
+                            <div class="filter-chip" data-filter-type="time" data-value="2">2h</div>
+                            <div class="filter-chip" data-filter-type="time" data-value="1">1h</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted">Category</label>
+                        <div>
+                            <div class="filter-chip active" data-filter-type="category" data-value="all">All</div>
+                            <div class="filter-chip" data-filter-type="category" data-value="crypto">Crypto</div>
+                            <div class="filter-chip" data-filter-type="category" data-value="markets">Markets</div>
+                            <div class="filter-chip" data-filter-type="category" data-value="usa_news">USA News</div>
+                            <div class="filter-chip" data-filter-type="category" data-value="commodities">Commodities</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted">Sentiment</label>
+                        <div>
+                            <div class="filter-chip active" data-filter-type="sentiment" data-value="all">All</div>
+                            <div class="filter-chip" data-filter-type="sentiment" data-value="positive">Positive</div>
+                            <div class="filter-chip" data-filter-type="sentiment" data-value="neutral">Neutral</div>
+                            <div class="filter-chip" data-filter-type="sentiment" data-value="negative">Negative</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted">Sort By</label>
+                        <div>
+                            <div class="filter-chip active" data-filter-type="sort" data-value="relevance">Relevance</div>
+                            <div class="filter-chip" data-filter-type="sort" data-value="date">Date</div>
+                            <div class="filter-chip" data-filter-type="sort" data-value="sentiment">Sentiment</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Summary (Hidden initially) -->
+        <div id="resultsSummary" style="display: none;">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-box">
+                        <h3 id="totalArticles">0</h3>
+                        <p>Articles Found</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-box">
+                        <h3 id="avgSentiment">0.00</h3>
+                        <p>Avg Sentiment</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-box">
+                        <h3 id="uniqueSources">0</h3>
+                        <p>Unique Sources</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-box">
+                        <h3 id="timeSpan">-</h3>
+                        <p>Time Span</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Tabs (Hidden initially) -->
+        <div id="analysisContainer" style="display: none;">
+            <ul class="nav nav-tabs mb-3" role="tablist" style="border-bottom: 2px solid #2f3336;">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="articles-tab" data-bs-toggle="tab" data-bs-target="#articles" type="button" role="tab">
+                        Articles
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline" type="button" role="tab">
+                        Timeline
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="sentiment-tab" data-bs-toggle="tab" data-bs-target="#sentiment-analysis" type="button" role="tab">
+                        Sentiment Analysis
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="keywords-tab" data-bs-toggle="tab" data-bs-target="#keywords" type="button" role="tab">
+                        Related Keywords
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="sources-tab" data-bs-toggle="tab" data-bs-target="#sources" type="button" role="tab">
+                        Sources
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- Articles Tab -->
+                <div class="tab-pane fade show active" id="articles" role="tabpanel">
+                    <div class="chart-container">
+                        <h5 class="mb-3">Search Results</h5>
+                        <div id="articlesContainer">
+                            <!-- Articles will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline Tab -->
+                <div class="tab-pane fade" id="timeline" role="tabpanel">
+                    <div class="chart-container">
+                        <h5 class="mb-3">Timeline View</h5>
+                        <div id="timelineChart" style="height: 500px;"></div>
+                    </div>
+                </div>
+
+                <!-- Sentiment Analysis Tab -->
+                <div class="tab-pane fade" id="sentiment-analysis" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h5 class="mb-3">Sentiment Over Time</h5>
+                                <div id="sentimentTimeChart" style="height: 400px;"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h5 class="mb-3">Sentiment Distribution</h5>
+                                <div id="sentimentDistChart" style="height: 400px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Related Keywords Tab -->
+                <div class="tab-pane fade" id="keywords" role="tabpanel">
+                    <div class="chart-container">
+                        <h5 class="mb-3">Keyword Co-occurrence Network</h5>
+                        <div id="keywordNetworkChart" style="height: 600px;"></div>
+                    </div>
+                </div>
+
+                <!-- Sources Tab -->
+                <div class="tab-pane fade" id="sources" role="tabpanel">
+                    <div class="chart-container">
+                        <h5 class="mb-3">Source Analysis</h5>
+                        <div id="sourcesChart" style="height: 400px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Results Message (Hidden initially) -->
+        <div id="noResults" style="display: none;">
+            <div class="chart-container">
+                <div class="no-results">
+                    <svg fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>
+                    <h3>No results found</h3>
+                    <p>Try adjusting your search query or filters</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner (Hidden initially) -->
+        <div id="loadingSpinner" style="display: none;">
+            <div class="chart-container">
+                <div class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Analyzing news data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .nav-tabs .nav-link {
+            color: #8b98a5;
+            border: none;
+            background: transparent;
+            padding: 12px 20px;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #1da1f2;
+            background: #16181c;
+            border-bottom: 3px solid #1da1f2;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: #e7e9ea;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/search.js"></script>
+</body>
+</html>
