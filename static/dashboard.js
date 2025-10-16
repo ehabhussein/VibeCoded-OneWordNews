@@ -426,23 +426,30 @@ function createEntityNetwork(entityType = '') {
                 node.y = height / 2 + (Math.random() - 0.5) * height * 0.8;
             });
 
-            // Create force simulation with stronger forces
+            // Create force simulation with increased distance and spacing
             const simulation = d3.forceSimulation(networkData.nodes)
                 .force('link', d3.forceLink(networkData.links)
                     .id(d => d.id)
                     .distance(d => {
-                        // Entities should be further apart
+                        // Much greater distance to prevent overlap
                         const sourceIsEntity = d.source.type === 'entity';
                         const targetIsEntity = d.target.type === 'entity';
-                        if (sourceIsEntity && targetIsEntity) return 300;
-                        return 120;
+                        if (sourceIsEntity && targetIsEntity) return 400;
+                        return 180;
                     })
-                    .strength(0.5))
+                    .strength(0.3))
                 .force('charge', d3.forceManyBody()
-                    .strength(d => d.type === 'entity' ? -800 : -300))
+                    .strength(d => d.type === 'entity' ? -1200 : -500))
                 .force('center', d3.forceCenter(width / 2, height / 2))
                 .force('collision', d3.forceCollide()
-                    .radius(d => d.type === 'entity' ? 15 : 10))
+                    .radius(d => {
+                        // Collision radius based on actual circle size + padding
+                        if (d.type === 'entity') {
+                            return Math.sqrt(d.mentions) * 0.5 + 20;
+                        } else {
+                            return Math.sqrt(d.count) * 0.4 + 15;
+                        }
+                    }))
                 .velocityDecay(0.4);
 
             // Create links (inside zoom group)
@@ -473,11 +480,11 @@ function createEntityNetwork(entityType = '') {
             nodes.append('circle')
                 .attr('r', d => {
                     if (d.type === 'entity') {
-                        // Entity nodes: smaller now
-                        return Math.sqrt(d.mentions) * 0.8 + 8;
+                        // Entity nodes: much smaller
+                        return Math.sqrt(d.mentions) * 0.5 + 6;
                     } else {
-                        // Keyword nodes: even smaller
-                        return Math.sqrt(d.count) * 0.6 + 5;
+                        // Keyword nodes: very small
+                        return Math.sqrt(d.count) * 0.4 + 4;
                     }
                 })
                 .attr('fill', d => {
@@ -506,13 +513,15 @@ function createEntityNetwork(entityType = '') {
                             <strong>${emoji} ${d.id}</strong><br/>
                             Type: ${d.label}<br/>
                             Mentions: ${d.mentions}<br/>
-                            Articles: ${d.articles}
+                            Articles: ${d.articles}<br/>
+                            <em style="color: #1da1f2; font-size: 11px;">Click to see articles</em>
                         `);
                     } else {
                         tooltip.html(`
                             <strong>🔑 ${d.id}</strong><br/>
                             Type: Keyword<br/>
-                            Total Count: ${d.count}
+                            Total Count: ${d.count}<br/>
+                            <em style="color: #1da1f2; font-size: 11px;">Click to see articles</em>
                         `);
                     }
                     tooltip.style('visibility', 'visible');
@@ -526,21 +535,31 @@ function createEntityNetwork(entityType = '') {
                 .on('mouseout', function() {
                     tooltip.style('visibility', 'hidden');
                     d3.select(this).attr('stroke', '#0f1419').attr('stroke-width', 2);
+                })
+                .on('click', function(event, d) {
+                    event.stopPropagation();
+                    // Show articles modal for this entity or keyword
+                    if (d.type === 'entity') {
+                        showEntityArticlesModal(d.id);
+                    } else {
+                        // For keywords, use the existing keyword modal
+                        showKeywordArticlesModal(d.id);
+                    }
                 });
 
             // Add labels to nodes
             nodes.append('text')
-                .text(d => d.id.length > 12 ? d.id.substring(0, 12) + '...' : d.id)
+                .text(d => d.id.length > 10 ? d.id.substring(0, 10) + '...' : d.id)
                 .attr('text-anchor', 'middle')
                 .attr('dy', d => {
                     if (d.type === 'entity') {
-                        return Math.sqrt(d.mentions) * 0.8 + 18;
+                        return Math.sqrt(d.mentions) * 0.5 + 14;
                     } else {
-                        return Math.sqrt(d.count) * 0.6 + 13;
+                        return Math.sqrt(d.count) * 0.4 + 11;
                     }
                 })
                 .attr('fill', '#e7e9ea')
-                .attr('font-size', d => d.type === 'entity' ? '11px' : '9px')
+                .attr('font-size', d => d.type === 'entity' ? '10px' : '8px')
                 .attr('font-weight', d => d.type === 'entity' ? '700' : '500')
                 .style('pointer-events', 'none')
                 .style('user-select', 'none');
@@ -1063,6 +1082,107 @@ function showKeywordArticlesModal(keyword) {
         })
         .catch(error => {
             console.error('Error loading keyword articles:', error);
+            document.getElementById('keywordArticlesContent').innerHTML = `
+                <p class="text-center text-danger">Error loading articles. Please try again.</p>
+            `;
+        });
+}
+
+// Show articles for a specific entity (person, company, location, etc.)
+function showEntityArticlesModal(entityText) {
+    // Get modal element
+    const modal = new bootstrap.Modal(document.getElementById('keywordArticlesModal'));
+
+    // Update modal title
+    document.getElementById('keywordArticlesModalLabel').textContent = `Articles mentioning "${entityText}"`;
+
+    // Show loading spinner
+    document.getElementById('keywordArticlesContent').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+
+    // Show modal
+    modal.show();
+
+    // Fetch articles for this entity using current time range
+    const hours = current24hTimeRange || 24;
+    fetch(`/api/entity/${encodeURIComponent(entityText)}/articles?hours=${hours}&limit=50`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.articles && data.articles.length > 0) {
+                // Render articles
+                const articlesHTML = data.articles.map(article => {
+                    const sentiment = article.sentiment_label || 'neutral';
+                    const sentimentScore = article.sentiment_score || 0;
+                    const category = article.category || 'general';
+                    const createdAt = new Date(article.created_at).toLocaleString();
+
+                    return `
+                        <div class="tweet-card mb-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="category-badge">${category.toUpperCase()}</span>
+                                    <span class="sentiment-badge sentiment-${sentiment.replace('_', '-')}">${sentiment.replace('_', ' ').toUpperCase()}</span>
+                                </div>
+                                <small style="color: white;">${createdAt}</small>
+                            </div>
+                            <div class="mb-2">
+                                <strong>@${article.source || article.user_handle || 'Unknown'}</strong>
+                            </div>
+                            <p class="mb-2">${escapeHtml(article.text)}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Sentiment: ${sentimentScore.toFixed(2)}</small>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Create time range text
+                const hours = current24hTimeRange || 24;
+                let timeText = 'last 24 hours';
+                if (hours === 9999) timeText = 'all time';
+                else if (hours === 168) timeText = 'last week';
+                else if (hours === 24) timeText = 'last 24 hours';
+                else if (hours === 12) timeText = 'last 12 hours';
+                else if (hours === 6) timeText = 'last 6 hours';
+                else if (hours === 5) timeText = 'last 5 hours';
+                else if (hours === 4) timeText = 'last 4 hours';
+                else if (hours === 3) timeText = 'last 3 hours';
+                else if (hours === 2) timeText = 'last 2 hours';
+                else if (hours === 1) timeText = 'last hour';
+                else timeText = `last ${hours} hours`;
+
+                document.getElementById('keywordArticlesContent').innerHTML = `
+                    <p class="text-muted mb-3">Found ${data.count} articles mentioning "<strong>${entityText}</strong>" in the ${timeText}</p>
+                    ${articlesHTML}
+                `;
+            } else {
+                // Create time range text for no results message
+                const hours = current24hTimeRange || 24;
+                let timeText = 'last 24 hours';
+                if (hours === 9999) timeText = 'all time';
+                else if (hours === 168) timeText = 'last week';
+                else if (hours === 24) timeText = 'last 24 hours';
+                else if (hours === 12) timeText = 'last 12 hours';
+                else if (hours === 6) timeText = 'last 6 hours';
+                else if (hours === 5) timeText = 'last 5 hours';
+                else if (hours === 4) timeText = 'last 4 hours';
+                else if (hours === 3) timeText = 'last 3 hours';
+                else if (hours === 2) timeText = 'last 2 hours';
+                else if (hours === 1) timeText = 'last hour';
+                else timeText = `last ${hours} hours`;
+
+                document.getElementById('keywordArticlesContent').innerHTML = `
+                    <p class="text-center text-muted">No articles found mentioning "${entityText}" in the ${timeText}</p>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading entity articles:', error);
             document.getElementById('keywordArticlesContent').innerHTML = `
                 <p class="text-center text-danger">Error loading articles. Please try again.</p>
             `;

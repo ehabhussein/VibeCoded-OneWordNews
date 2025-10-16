@@ -492,6 +492,30 @@ class WebApp:
                 self.logger.error(f"Error getting keyword articles: {e}")
                 return jsonify({'error': str(e)}), 500
 
+        @self.app.route('/api/entity/<entity_text>/articles')
+        def get_entity_articles(entity_text):
+            """Get news articles for a specific entity"""
+            try:
+                hours = int(request.args.get('hours', 24))
+                limit = int(request.args.get('limit', 50))
+
+                articles = self.db.get_entity_timeline(
+                    entity_text=entity_text,
+                    hours=hours
+                )
+
+                # Limit results
+                articles = articles[:limit]
+
+                return jsonify({
+                    'entity': entity_text,
+                    'count': len(articles),
+                    'articles': articles
+                })
+            except Exception as e:
+                self.logger.error(f"Error getting entity articles: {e}")
+                return jsonify({'error': str(e)}), 500
+
         @self.app.route('/api/search')
         def advanced_search():
             """Advanced search with multiple filters"""
