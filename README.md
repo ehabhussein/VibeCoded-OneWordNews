@@ -15,7 +15,7 @@ Real-time news intelligence platform with AI-powered entity recognition, sentime
 ## Features
 
 ### Core Intelligence
-- 📰 **15+ RSS News Feeds** - Real-time monitoring from CoinDesk, Crypto Briefing, Investing.com, DailyFX, and more
+- 📰 **87 RSS News Feeds** - Real-time monitoring from Reuters, Bloomberg, CNBC, CoinDesk, Cointelegraph, NYT, BBC, and 80+ more sources
 - 🤖 **AI Entity Recognition (spaCy NER)** - Extracts people, organizations, locations with context-aware classification
 - 📊 **BERT Sentiment Analysis** - Advanced sentiment scoring (-1 to +1) for all articles
 - 💰 **Live Crypto Prices** - Binance WebSocket integration for BTC, ETH, SOL, TRUMP, and 7 more
