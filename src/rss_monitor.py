@@ -40,7 +40,8 @@ class RSSFeedConfig:
             'interval': 120
         },
 
-        # CNN Politics
+        # CNN Politics - Note: RSS feed appears to be stale/deprecated
+        # Keeping it enabled but it may not return recent articles
         'cnn_politics': {
             'url': 'http://rss.cnn.com/rss/cnn_allpolitics.rss',
             'category': 'usa_news',
@@ -292,6 +293,87 @@ class RSSFeedConfig:
             'category': 'usa_news',
             'interval': 120
         },
+        'cbs_politics': {
+            'url': 'https://www.cbsnews.com/latest/rss/politics',
+            'category': 'usa_news',
+            'interval': 120
+        },
+
+        # MSNBC
+        'msnbc_top': {
+            'url': 'https://www.msnbc.com/feeds/latest',
+            'category': 'usa_news',
+            'interval': 120
+        },
+
+        # Associated Press (AP)
+        'ap_top': {
+            'url': 'https://apnews.com/apf-topnews',
+            'category': 'usa_news',
+            'interval': 120
+        },
+        'ap_us': {
+            'url': 'https://apnews.com/apf-usnews',
+            'category': 'usa_news',
+            'interval': 120
+        },
+        'ap_world': {
+            'url': 'https://apnews.com/apf-worldnews',
+            'category': 'usa_news',
+            'interval': 120
+        },
+        'ap_business': {
+            'url': 'https://apnews.com/apf-business',
+            'category': 'markets',
+            'interval': 120
+        },
+
+        # Axios
+        'axios_politics': {
+            'url': 'https://api.axios.com/feed/',
+            'category': 'usa_news',
+            'interval': 120
+        },
+
+        # Newsweek
+        'newsweek': {
+            'url': 'https://www.newsweek.com/rss',
+            'category': 'usa_news',
+            'interval': 120
+        },
+
+        # Time Magazine
+        'time_politics': {
+            'url': 'https://time.com/feed/',
+            'category': 'usa_news',
+            'interval': 120
+        },
+
+        # The Atlantic
+        'theatlantic': {
+            'url': 'https://www.theatlantic.com/feed/all/',
+            'category': 'usa_news',
+            'interval': 120
+        },
+
+        # Politico Europe (for international perspective)
+        'politico_europe': {
+            'url': 'https://www.politico.eu/feed/',
+            'category': 'usa_news',
+            'interval': 120
+        },
+
+        # LA Times
+        'latimes_politics': {
+            'url': 'https://www.latimes.com/politics/rss2.0.xml',
+            'category': 'usa_news',
+            'interval': 120
+        },
+        'latimes_business': {
+            'url': 'https://www.latimes.com/business/rss2.0.xml',
+            'category': 'markets',
+            'interval': 120
+        },
 
         # Financial Times
         'ft_world': {
@@ -427,6 +509,67 @@ class RSSFeedConfig:
         'oilprice_news': {
             'url': 'https://oilprice.com/rss/main',
             'category': 'commodities',
+            'interval': 120
+        },
+
+        # The Economist
+        'economist': {
+            'url': 'https://www.economist.com/finance-and-economics/rss.xml',
+            'category': 'markets',
+            'interval': 120
+        },
+
+        # Reuters Crypto
+        'reuters_crypto': {
+            'url': 'https://www.reuters.com/technology/crypto-currency',
+            'category': 'crypto',
+            'interval': 120
+        },
+
+        # FXStreet (Forex & Crypto)
+        'fxstreet': {
+            'url': 'https://www.fxstreet.com/rss/fxstreet-forex-news.xml',
+            'category': 'markets',
+            'interval': 120
+        },
+
+        # DailyFX
+        'dailyfx': {
+            'url': 'https://www.dailyfx.com/feeds/market-news',
+            'category': 'markets',
+            'interval': 120
+        },
+
+        # Bitcoin.com
+        'bitcoin_com': {
+            'url': 'https://blog.bitcoin.com/feed',
+            'category': 'crypto',
+            'interval': 120
+        },
+
+        # Gold & Commodity News
+        'kitco_gold': {
+            'url': 'https://www.kitco.com/rss/live_news_gold.xml',
+            'category': 'commodities',
+            'interval': 120
+        },
+
+        # Energy Intelligence
+        'natural_gas_intel': {
+            'url': 'https://www.naturalgasintel.com/feed/',
+            'category': 'commodities',
+            'interval': 120
+        },
+
+        # More Crypto Sources
+        'coinmarketcap': {
+            'url': 'https://coinmarketcap.com/headlines/rss/',
+            'category': 'crypto',
+            'interval': 120
+        },
+        'beincrypto': {
+            'url': 'https://beincrypto.com/feed/',
+            'category': 'crypto',
             'interval': 120
         },
     }
@@ -567,10 +710,10 @@ class RSSMonitor:
             else:
                 published = datetime.now()
 
-            # ⚠️ FILTER: Only process articles from the last 24 hours
+            # ⚠️ FILTER: Only process articles from the last 7 days (1 week)
             now = datetime.now()
             time_diff = now - published
-            if time_diff.total_seconds() > 86400:  # 86400 seconds = 24 hours
+            if time_diff.total_seconds() > 604800:  # 604800 seconds = 7 days (168 hours)
                 self.logger.debug(f"Skipping old article (published {time_diff} ago): {title[:50]}")
                 return
 

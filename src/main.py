@@ -17,11 +17,15 @@ from database import Database
 from twitter_stream import TwitterMonitor, TwitterConfig
 from text_processor import TextProcessor
 from sentiment_analyzer_cpu import SentimentAnalyzerCPU  # CPU-based sentiment analysis
+from entity_extractor import EntityExtractor  # Entity recognition
 from web_app import WebApp
 from binance_monitor import BinanceMonitor
 from rss_monitor import RSSMonitor
 from forex_factory_scraper import ForexFactoryScraper
 from message_queue import MessageQueue
+from slack_notifier import SlackNotifier
+from ollama_ai import OllamaAI
+from news_intelligence import NewsIntelligence
 
 
 # Configure logging - WARNING level only (less verbose)
@@ -73,6 +77,7 @@ class OneWordNews:
         self.db = Database(self.db_path)
         self.text_processor = TextProcessor()
         self.sentiment_analyzer = SentimentAnalyzerCPU()  # CPU-based sentiment analysis
+        self.entity_extractor = EntityExtractor()  # Named entity recognition
 
         # Initialize Twitter monitor if credentials available
         self.twitter_monitor = None
@@ -108,8 +113,44 @@ class OneWordNews:
             callback=None  # Will be set in process_article
         )
 
+        # Initialize news intelligence services
+        self.slack_webhook_url = os.getenv('SLACK_WEBHOOK_URL')
+        self.ollama_base_url = os.getenv('OLLAMA_BASE_URL', 'http://host.docker.internal:11434')
+        self.ollama_model = os.getenv('OLLAMA_MODEL', 'phi4:latest')
+
+        self.slack_notifier = None
+        self.ollama_ai = None
+        self.news_intelligence = None
+
+        if self.slack_webhook_url:
+            self.slack_notifier = SlackNotifier(webhook_url=self.slack_webhook_url)
+            logger.info("Slack notifier initialized")
+        else:
+            logger.warning("Slack webhook URL not found. Notifications disabled.")
+
+        # Initialize Ollama AI
+        try:
+            self.ollama_ai = OllamaAI(base_url=self.ollama_base_url, model=self.ollama_model)
+            logger.info(f"Ollama AI initialized with model: {self.ollama_model}")
+        except Exception as e:
+            logger.warning(f"Ollama AI initialization failed: {e}. AI features disabled.")
+
+        # Initialize news intelligence (combines all intelligence features)
+        self.news_intelligence = NewsIntelligence(
+            db=self.db,
+            slack_notifier=self.slack_notifier,
+            ollama_ai=self.ollama_ai
+        )
+        logger.info("News Intelligence service initialized with scheduled briefings and trend detection")
+
         # Initialize web app (pass binance_monitor for crypto price display and rss_monitor for admin controls)
-        self.web_app = WebApp(db=self.db, binance_monitor=self.binance_monitor, rss_monitor=self.rss_monitor, port=8080)
+        self.web_app = WebApp(
+            db=self.db,
+            binance_monitor=self.binance_monitor,
+            rss_monitor=self.rss_monitor,
+            news_intelligence=self.news_intelligence,
+            port=8080
+        )
 
         # Initialize message queue for Redis pub/sub
         self.mq = MessageQueue()
@@ -155,6 +196,9 @@ class OneWordNews:
             # Calculate market impact
             market_impact = self.sentiment_analyzer.get_market_impact_score(sentiment, text)
 
+            # Extract entities (companies, people, locations, etc.)
+            entities_data = self.entity_extractor.extract_entities(text)
+
             # Convert article to tweet-like structure for database
             tweet_data = {
                 'tweet_id': article_data['article_id'],
@@ -186,6 +230,13 @@ class OneWordNews:
                         category=category,
                         tweet_id=article_data['article_id']
                     )
+
+            # Save entities
+            if entities_data and entities_data.get('all_entities'):
+                self.db.insert_entities(
+                    tweet_id=article_data['article_id'],
+                    entities=entities_data['all_entities']
+                )
 
             # Publish to Redis hub
             article_with_sentiment = {

@@ -13,11 +13,12 @@ from crypto_predictor import CryptoPredictor
 
 
 class WebApp:
-    def __init__(self, db, binance_monitor=None, rss_monitor=None, port=8080):
+    def __init__(self, db, binance_monitor=None, rss_monitor=None, news_intelligence=None, port=8080):
         """Initialize Flask web application with Redis hub"""
         self.db = db
         self.binance_monitor = binance_monitor
         self.rss_monitor = rss_monitor
+        self.news_intelligence = news_intelligence
         self.port = port
 
         # Initialize crypto predictor
@@ -62,6 +63,11 @@ class WebApp:
         def search_page():
             """Advanced search and analysis page"""
             return render_template('search.html')
+
+        @self.app.route('/intelligence')
+        def intelligence_page():
+            """News Intelligence page with AI insights and trend analysis"""
+            return render_template('intelligence.html')
 
         @self.app.route('/api/stats')
         def get_stats():
@@ -619,6 +625,263 @@ class WebApp:
 
             except Exception as e:
                 self.logger.error(f"Error creating source network: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        # News Intelligence API Endpoints
+        @self.app.route('/api/intelligence/trends')
+        def intelligence_trends():
+            """Get current trending topics with momentum analysis"""
+            try:
+                if not self.news_intelligence:
+                    return jsonify({'error': 'News intelligence service not available'}), 503
+
+                hours = int(request.args.get('hours', 6))
+                min_articles = int(request.args.get('min_articles', 3))
+
+                # Detect trending topics with error handling
+                try:
+                    trending = self.news_intelligence.detect_trending_topics(
+                        hours=hours,
+                        min_articles=min_articles
+                    )
+                except Exception as trend_error:
+                    self.logger.error(f"Trend detection error: {trend_error}")
+                    trending = []
+
+                return jsonify({
+                    'trends': trending,
+                    'generated_at': datetime.now().isoformat(),
+                    'time_window': f'{hours}h'
+                })
+            except Exception as e:
+                self.logger.error(f"Error getting trending topics: {e}", exc_info=True)
+                return jsonify({'error': 'Failed to load trending topics'}), 500
+
+        @self.app.route('/api/intelligence/briefing/<brief_type>')
+        def intelligence_briefing(brief_type):
+            """Get news briefing (morning, midday, evening, day, week)"""
+            try:
+                if not self.news_intelligence:
+                    return jsonify({'error': 'News intelligence service not available'}), 503
+
+                if brief_type not in ['morning', 'midday', 'evening', 'day', 'week']:
+                    return jsonify({'error': 'Invalid brief type. Use: morning, midday, evening, day, or week'}), 400
+
+                brief = self.news_intelligence.generate_daily_brief(brief_type)
+
+                return jsonify({
+                    'briefing': brief,
+                    'generated_at': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Error generating briefing: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/intelligence/what-changed')
+        def intelligence_what_changed():
+            """Get what's changed since last visit"""
+            try:
+                if not self.news_intelligence:
+                    return jsonify({'error': 'News intelligence service not available'}), 503
+
+                # Get last visit timestamp from query param or default to 24h ago
+                last_visit_str = request.args.get('last_visit')
+                if last_visit_str:
+                    last_visit = datetime.fromisoformat(last_visit_str)
+                else:
+                    last_visit = datetime.now() - timedelta(hours=24)
+
+                changes = self.news_intelligence.get_what_changed(last_visit)
+
+                return jsonify({
+                    'changes': changes,
+                    'generated_at': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Error calculating what changed: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/intelligence/tldr/<keyword>')
+        def intelligence_tldr(keyword):
+            """Get TL;DR summary for a specific topic"""
+            try:
+                if not self.news_intelligence:
+                    return jsonify({'error': 'News intelligence service not available'}), 503
+
+                hours = int(request.args.get('hours', 24))
+                articles = self.db.get_tweets_by_keyword(keyword, hours=hours, limit=10)
+
+                if not articles:
+                    return jsonify({
+                        'keyword': keyword,
+                        'tldr': f'No recent articles found about {keyword}',
+                        'article_count': 0
+                    })
+
+                if self.news_intelligence.ai:
+                    tldr = self.news_intelligence.ai.generate_tldr(keyword, articles)
+                else:
+                    tldr = f'{len(articles)} articles discussing {keyword}'
+
+                return jsonify({
+                    'keyword': keyword,
+                    'tldr': tldr,
+                    'article_count': len(articles),
+                    'generated_at': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Error generating TL;DR: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/intelligence/sources/<keyword>')
+        def intelligence_sources(keyword):
+            """Compare how different sources cover a topic"""
+            try:
+                if not self.news_intelligence:
+                    return jsonify({'error': 'News intelligence service not available'}), 503
+
+                hours = int(request.args.get('hours', 24))
+                comparison = self.news_intelligence.compare_sources(keyword, hours=hours)
+
+                return jsonify({
+                    'comparison': comparison,
+                    'generated_at': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Error comparing sources: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/intelligence/story-thread/<keyword>')
+        def intelligence_story_thread(keyword):
+            """Get story thread analysis for a developing story"""
+            try:
+                if not self.news_intelligence:
+                    return jsonify({'error': 'News intelligence service not available'}), 503
+
+                hours = int(request.args.get('hours', 48))
+                thread = self.news_intelligence.detect_story_threads(keyword, hours=hours)
+
+                return jsonify({
+                    'thread': thread,
+                    'generated_at': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Error analyzing story thread: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/intelligence/trend-momentum/<keyword>')
+        def intelligence_trend_momentum(keyword):
+            """Get momentum analysis for a specific keyword"""
+            try:
+                if not self.news_intelligence:
+                    return jsonify({'error': 'News intelligence service not available'}), 503
+
+                hours = int(request.args.get('hours', 6))
+                momentum = self.news_intelligence.calculate_trend_momentum(keyword, hours=hours)
+
+                return jsonify({
+                    'momentum': momentum,
+                    'generated_at': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Error calculating momentum: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        # Entity Recognition API Endpoints
+        @self.app.route('/api/entities/trending')
+        def entities_trending():
+            """Get trending entities (people, companies, locations)"""
+            try:
+                hours = int(request.args.get('hours', 24))
+                entity_type = request.args.get('type', None)  # PERSON, ORG, GPE, etc.
+                limit = int(request.args.get('limit', 50))
+
+                entities = self.db.get_trending_entities(
+                    hours=hours,
+                    entity_type=entity_type,
+                    limit=limit
+                )
+
+                return jsonify({
+                    'entities': entities,
+                    'count': len(entities),
+                    'hours': hours,
+                    'entity_type': entity_type,
+                    'generated_at': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Error getting trending entities: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/entities/timeline/<entity_text>')
+        def entities_timeline(entity_text):
+            """Get timeline of articles mentioning a specific entity"""
+            try:
+                hours = int(request.args.get('hours', 168))  # Default 1 week
+
+                timeline = self.db.get_entity_timeline(entity_text, hours=hours)
+
+                return jsonify({
+                    'entity': entity_text,
+                    'timeline': timeline,
+                    'count': len(timeline),
+                    'hours': hours,
+                    'generated_at': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Error getting entity timeline: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/entities/by-category/<category>')
+        def entities_by_category(category):
+            """Get entities grouped by type for a specific category"""
+            try:
+                hours = int(request.args.get('hours', 24))
+                limit = int(request.args.get('limit', 30))
+
+                entities = self.db.get_entities_by_category(
+                    category=category,
+                    hours=hours,
+                    limit=limit
+                )
+
+                return jsonify({
+                    'category': category,
+                    'entities': entities,
+                    'hours': hours,
+                    'generated_at': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Error getting entities by category: {e}")
+                return jsonify({'error': str(e)}), 500
+
+        @self.app.route('/api/entities/network')
+        def entities_network():
+            """Get entity-keyword network data for visualization (entities with linked keywords)"""
+            try:
+                hours = int(request.args.get('hours', 24))
+                entity_type = request.args.get('type', None)
+                min_keyword_count = int(request.args.get('min_keyword_count', 3))
+                entity_limit = int(request.args.get('entity_limit', 20))
+                keywords_per_entity = int(request.args.get('keywords_per_entity', 10))
+
+                network_data = self.db.get_entity_network(
+                    hours=hours,
+                    entity_type=entity_type,
+                    min_keyword_count=min_keyword_count,
+                    entity_limit=entity_limit,
+                    keywords_per_entity=keywords_per_entity
+                )
+
+                return jsonify({
+                    'nodes': network_data['nodes'],
+                    'links': network_data['links'],
+                    'hours': hours,
+                    'entity_type': entity_type,
+                    'generated_at': datetime.now().isoformat()
+                })
+            except Exception as e:
+                self.logger.error(f"Error getting entity network: {e}")
                 return jsonify({'error': str(e)}), 500
 
         @self.socketio.on('connect')

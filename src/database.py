@@ -106,6 +106,43 @@ class Database:
             )
         """)
 
+        # User visits table (for "What Changed" feature)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_visits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT DEFAULT 'default',
+                visit_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                session_id TEXT
+            )
+        """)
+
+        # Trend history table (for momentum tracking)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS trend_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                keyword TEXT NOT NULL,
+                article_count INTEGER DEFAULT 0,
+                momentum REAL DEFAULT 0,
+                avg_sentiment REAL DEFAULT 0,
+                categories TEXT,
+                trend_status TEXT,
+                recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Entities table (for named entity recognition)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS entities (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tweet_id TEXT NOT NULL,
+                entity_text TEXT NOT NULL,
+                entity_label TEXT NOT NULL,
+                entity_count INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (tweet_id) REFERENCES tweets(tweet_id)
+            )
+        """)
+
         # Create indexes for better query performance
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tweets_created_at ON tweets(created_at)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_tweets_category ON tweets(category)")
@@ -115,6 +152,10 @@ class Database:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_word_category ON word_frequency(category)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_timeseries_category ON time_series(category)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_timeseries_interval ON time_series(interval_start)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entities_tweet_id ON entities(tweet_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entities_text ON entities(entity_text)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entities_label ON entities(entity_label)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entities_created_at ON entities(created_at)")
 
         conn.commit()
         conn.close()
@@ -637,6 +678,7 @@ class Database:
             cursor.execute("DELETE FROM word_frequency")
             cursor.execute("DELETE FROM time_series")
             cursor.execute("DELETE FROM alerts")
+            cursor.execute("DELETE FROM entities")
             cursor.execute("DELETE FROM tweets")
 
             conn.commit()
@@ -651,3 +693,313 @@ class Database:
         except Exception as e:
             print(f"Error clearing database: {e}")
             return False
+
+    def insert_entities(self, tweet_id: str, entities: List[Dict[str, Any]]) -> bool:
+        """Insert extracted entities for an article
+
+        Args:
+            tweet_id: The article/tweet ID
+            entities: List of entity dicts with 'text', 'label', and 'count'
+        """
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+
+            for entity in entities:
+                cursor.execute("""
+                    INSERT INTO entities (tweet_id, entity_text, entity_label, entity_count)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    tweet_id,
+                    entity['text'],
+                    entity['label'],
+                    entity.get('count', 1)
+                ))
+
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Error inserting entities: {e}")
+            return False
+
+    def get_trending_entities(self, hours: int = 24, entity_type: str = None,
+                              limit: int = 50) -> List[Dict[str, Any]]:
+        """Get trending entities across all articles
+
+        Args:
+            hours: Time range in hours
+            entity_type: Filter by entity type (PERSON, ORG, GPE, etc.)
+            limit: Maximum results
+
+        Returns:
+            List of entities with counts, sorted by frequency
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        if entity_type:
+            cursor.execute("""
+                SELECT
+                    e.entity_text,
+                    e.entity_label,
+                    COUNT(DISTINCT e.tweet_id) as article_count,
+                    SUM(e.entity_count) as total_mentions,
+                    GROUP_CONCAT(DISTINCT t.category) as categories,
+                    MAX(t.created_at) as last_seen
+                FROM entities e
+                INNER JOIN tweets t ON e.tweet_id = t.tweet_id
+                WHERE e.entity_label = ?
+                AND datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
+                GROUP BY e.entity_text, e.entity_label
+                ORDER BY total_mentions DESC
+                LIMIT ?
+            """, (entity_type, hours, limit))
+        else:
+            cursor.execute("""
+                SELECT
+                    e.entity_text,
+                    e.entity_label,
+                    COUNT(DISTINCT e.tweet_id) as article_count,
+                    SUM(e.entity_count) as total_mentions,
+                    GROUP_CONCAT(DISTINCT t.category) as categories,
+                    MAX(t.created_at) as last_seen
+                FROM entities e
+                INNER JOIN tweets t ON e.tweet_id = t.tweet_id
+                WHERE datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
+                GROUP BY e.entity_text, e.entity_label
+                ORDER BY total_mentions DESC
+                LIMIT ?
+            """, (hours, limit))
+
+        results = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return results
+
+    def get_entity_timeline(self, entity_text: str, hours: int = 168) -> List[Dict[str, Any]]:
+        """Get timeline of articles mentioning a specific entity
+
+        Args:
+            entity_text: The entity to search for
+            hours: Time range in hours (default 1 week)
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                t.tweet_id,
+                t.text,
+                t.user_handle as source,
+                t.created_at,
+                t.category,
+                s.sentiment_score,
+                s.sentiment_label,
+                e.entity_count
+            FROM entities e
+            INNER JOIN tweets t ON e.tweet_id = t.tweet_id
+            LEFT JOIN sentiment_analysis s ON t.tweet_id = s.tweet_id
+            WHERE LOWER(e.entity_text) = LOWER(?)
+            AND datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
+            ORDER BY t.created_at DESC
+        """, (entity_text, hours))
+
+        results = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return results
+
+    def get_entities_by_category(self, category: str, hours: int = 24,
+                                  limit: int = 30) -> Dict[str, List[Dict]]:
+        """Get entities grouped by type for a specific category
+
+        Returns:
+            {
+                'persons': [...],
+                'organizations': [...],
+                'locations': [...]
+            }
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                e.entity_text,
+                e.entity_label,
+                COUNT(DISTINCT e.tweet_id) as article_count,
+                SUM(e.entity_count) as total_mentions
+            FROM entities e
+            INNER JOIN tweets t ON e.tweet_id = t.tweet_id
+            WHERE t.category = ?
+            AND datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
+            GROUP BY e.entity_text, e.entity_label
+            ORDER BY total_mentions DESC
+        """, (category, hours))
+
+        all_entities = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+
+        # Group by type
+        result = {
+            'persons': [],
+            'organizations': [],
+            'locations': [],
+            'money': [],
+            'products': [],
+            'other': []
+        }
+
+        for entity in all_entities:
+            label = entity['entity_label']
+            if label == 'PERSON':
+                result['persons'].append(entity)
+            elif label == 'ORG':
+                result['organizations'].append(entity)
+            elif label in ('GPE', 'LOC'):
+                result['locations'].append(entity)
+            elif label == 'MONEY':
+                result['money'].append(entity)
+            elif label == 'PRODUCT':
+                result['products'].append(entity)
+            else:
+                result['other'].append(entity)
+
+        # Limit each category
+        for key in result:
+            result[key] = result[key][:limit]
+
+        return result
+
+    def get_entity_network(self, hours: int = 24, entity_type: str = None,
+                          min_keyword_count: int = 3, entity_limit: int = 20,
+                          keywords_per_entity: int = 10) -> Dict[str, Any]:
+        """Get entity-keyword network data for visualization
+
+        Returns nodes (entities and keywords) and links between them
+
+        Args:
+            hours: Time range in hours
+            entity_type: Filter by entity type (PERSON, ORG, GPE, etc.)
+            min_keyword_count: Minimum keyword frequency to include
+            entity_limit: Maximum number of entity nodes
+            keywords_per_entity: Max keywords to link per entity
+
+        Returns:
+            {
+                'nodes': [
+                    {'id': 'Bitcoin', 'type': 'entity', 'label': 'ORG', 'mentions': 10},
+                    {'id': 'price', 'type': 'keyword', 'count': 25},
+                    ...
+                ],
+                'links': [
+                    {'source': 'Bitcoin', 'target': 'price', 'value': 15},
+                    ...
+                ]
+            }
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        # Get top entities as nodes
+        if entity_type:
+            cursor.execute("""
+                SELECT
+                    e.entity_text,
+                    e.entity_label,
+                    COUNT(DISTINCT e.tweet_id) as article_count,
+                    SUM(e.entity_count) as total_mentions
+                FROM entities e
+                INNER JOIN tweets t ON e.tweet_id = t.tweet_id
+                WHERE e.entity_label = ?
+                AND datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
+                GROUP BY e.entity_text, e.entity_label
+                ORDER BY total_mentions DESC
+                LIMIT ?
+            """, (entity_type, hours, entity_limit))
+        else:
+            cursor.execute("""
+                SELECT
+                    e.entity_text,
+                    e.entity_label,
+                    COUNT(DISTINCT e.tweet_id) as article_count,
+                    SUM(e.entity_count) as total_mentions
+                FROM entities e
+                INNER JOIN tweets t ON e.tweet_id = t.tweet_id
+                WHERE datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
+                GROUP BY e.entity_text, e.entity_label
+                ORDER BY total_mentions DESC
+                LIMIT ?
+            """, (hours, entity_limit))
+
+        # Build entity nodes
+        entity_nodes = []
+        entity_texts = []
+        for row in cursor.fetchall():
+            entity = dict(row)
+            entity_nodes.append({
+                'id': entity['entity_text'],
+                'type': 'entity',
+                'label': entity['entity_label'],
+                'mentions': entity['total_mentions'],
+                'articles': entity['article_count']
+            })
+            entity_texts.append(entity['entity_text'])
+
+        # Get keywords for each entity
+        keyword_counts = {}  # Track total keyword counts across all entities
+        links = []
+
+        for entity_text in entity_texts:
+            # Get top keywords from articles mentioning this entity
+            cursor.execute("""
+                SELECT
+                    wf.word,
+                    COUNT(*) as count
+                FROM word_frequency wf
+                INNER JOIN entities e ON wf.tweet_id = e.tweet_id
+                INNER JOIN tweets t ON wf.tweet_id = t.tweet_id
+                WHERE LOWER(e.entity_text) = LOWER(?)
+                AND datetime(t.created_at) > datetime('now', 'localtime', '-' || ? || ' hours')
+                GROUP BY wf.word
+                ORDER BY count DESC
+                LIMIT ?
+            """, (entity_text, hours, keywords_per_entity))
+
+            for row in cursor.fetchall():
+                keyword_data = dict(row)
+                keyword = keyword_data['word']
+                count = keyword_data['count']
+
+                # Only include keywords with minimum frequency
+                if count >= min_keyword_count:
+                    # Track total keyword usage across all entities
+                    if keyword not in keyword_counts:
+                        keyword_counts[keyword] = 0
+                    keyword_counts[keyword] += count
+
+                    # Create link between entity and keyword
+                    links.append({
+                        'source': entity_text,
+                        'target': keyword,
+                        'value': count
+                    })
+
+        # Build keyword nodes
+        keyword_nodes = [
+            {
+                'id': keyword,
+                'type': 'keyword',
+                'count': count
+            }
+            for keyword, count in keyword_counts.items()
+        ]
+
+        # Combine all nodes
+        all_nodes = entity_nodes + keyword_nodes
+
+        conn.close()
+
+        return {
+            'nodes': all_nodes,
+            'links': links
+        }

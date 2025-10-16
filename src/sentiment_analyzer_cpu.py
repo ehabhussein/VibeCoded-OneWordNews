@@ -1,5 +1,6 @@
 """
-CPU-based Sentiment Analyzer using transformers (DistilBERT)
+CPU-based Sentiment Analyzer using transformers (FinBERT)
+FinBERT is specifically trained on financial news for accurate market sentiment analysis
 Fast, efficient, no GPU required
 """
 import logging
@@ -19,9 +20,10 @@ class SentimentAnalyzerCPU:
         self.cache_dir = cache_dir
 
         try:
-            # Use DistilBERT for sentiment analysis (CPU-friendly)
-            # This model is specifically fine-tuned for sentiment
-            self.logger.info(f"Loading DistilBERT sentiment model (CPU-only) from cache: {cache_dir}")
+            # Use FinBERT for sentiment analysis (CPU-friendly)
+            # FinBERT is specifically trained on financial news and market sentiment
+            # Much more accurate for news, markets, crypto, commodities, and economic content
+            self.logger.info(f"Loading FinBERT sentiment model (CPU-only) from cache: {cache_dir}")
 
             # Create cache directory if it doesn't exist
             import os
@@ -33,11 +35,11 @@ class SentimentAnalyzerCPU:
 
             self.sentiment_pipeline = pipeline(
                 "sentiment-analysis",
-                model="distilbert-base-uncased-finetuned-sst-2-english",
+                model="ProsusAI/finbert",  # FinBERT - specialized for financial/news sentiment
                 device=-1,  # Force CPU
                 model_kwargs={'cache_dir': cache_dir}
             )
-            self.logger.info("CPU sentiment model loaded successfully (cached)")
+            self.logger.info("FinBERT sentiment model loaded successfully (cached)")
         except Exception as e:
             self.logger.error(f"Error loading sentiment model: {e}")
             self.sentiment_pipeline = None
@@ -87,7 +89,7 @@ class SentimentAnalyzerCPU:
                 'score': score,
                 'label': label,
                 'confidence': confidence,
-                'reasoning': f'DistilBERT: {base_label} ({confidence:.2f})',
+                'reasoning': f'FinBERT: {base_label} ({confidence:.2f})',
                 'raw_response': str(result)
             }
 
@@ -96,31 +98,49 @@ class SentimentAnalyzerCPU:
             return self._get_fallback_sentiment(text)
 
     def _adjust_for_market_context(self, base_score: float, text: str) -> float:
-        """Adjust sentiment score based on market/financial context"""
+        """Adjust sentiment score based on market/financial context and news events"""
         text_lower = text.lower()
 
-        # Negative market keywords - make more negative
+        # Negative keywords - make more negative
+        # Includes market terms, disasters, emergencies, conflicts, and negative events
         negative_market_terms = [
+            # Market/Financial - Strong negative impact
             'recession', 'inflation', 'rate hike', 'crash', 'collapse',
             'deficit', 'unemployment', 'bearish', 'sell-off', 'panic',
-            'correction', 'plunge', 'decline', 'losses'
+            'correction', 'plunge', 'decline', 'losses', 'bankruptcy',
+            'wipeout', 'selloff', 'tumble', 'slump', 'downturn',
+            'default', 'debt crisis', 'contagion', 'meltdown',
+            # Disasters & Emergencies
+            'emergency', 'disaster', 'crisis', 'catastrophe', 'tragedy',
+            'accident', 'crash', 'forced landing', 'emergency landing',
+            'crack', 'malfunction', 'failure', 'explosion', 'fire',
+            # Conflicts & Violence
+            'war', 'attack', 'shooting', 'killed', 'death', 'casualties',
+            'conflict', 'bombing', 'strike', 'violence', 'riot',
+            # Legal/Political Issues
+            'scandal', 'investigation', 'indictment', 'charged', 'arrested',
+            'lawsuit', 'fraud', 'corruption', 'impeachment', 'crimes',
+            # Health/Safety
+            'outbreak', 'pandemic', 'contamination', 'recall', 'warning',
+            'threat', 'risk', 'danger', 'hazard', 'unsafe'
         ]
 
-        # Positive market keywords - make more positive
+        # Positive keywords - make more positive
         positive_market_terms = [
             'growth', 'rally', 'surge', 'bullish', 'gains', 'recovery',
-            'boom', 'profit', 'record high', 'breakthrough'
+            'boom', 'profit', 'record high', 'breakthrough', 'success',
+            'achievement', 'victory', 'win', 'agreement', 'resolution'
         ]
 
         adjustment = 0.0
 
         for term in negative_market_terms:
             if term in text_lower:
-                adjustment -= 0.1
+                adjustment -= 0.25  # Strong correction needed - FinBERT often misses negative context
 
         for term in positive_market_terms:
             if term in text_lower:
-                adjustment += 0.1
+                adjustment += 0.15  # Slight increase for positive terms
 
         # Apply adjustment
         adjusted_score = base_score + adjustment

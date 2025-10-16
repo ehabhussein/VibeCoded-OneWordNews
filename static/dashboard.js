@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStats();
     loadTweets();
     loadAlerts();
+    createEntityNetwork(); // Load entity network
     loadCharts();
     loadForexCalendar();
     loadLatestKeywords();
@@ -44,6 +45,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Setup admin control buttons
     setupAdminButtons();
+
+    // Setup entity type buttons
+    setupEntityButtons();
 
     // No periodic polling - all updates via WebSocket real-time
 });
@@ -236,6 +240,356 @@ function addNewTweet(tweetData) {
     }
 }
 
+// Load trending entities
+// Track entity network state
+let currentEntityNetworkData = null;
+let currentEntityNetworkSimulation = null;
+let entityNetworkElements = null;
+let currentEntityType = '';
+
+// Create Entity Network Graph
+function createEntityNetwork(entityType = '') {
+    const container = document.getElementById('entityNetworkContainer');
+    currentEntityType = entityType;
+
+    // Fetch entity-keyword network data
+    const hours = 24;
+    const entityLimit = 20;
+    const keywordsPerEntity = 10;
+    const minKeywordCount = 3;
+    let url = `/api/entities/network?hours=${hours}&entity_limit=${entityLimit}&keywords_per_entity=${keywordsPerEntity}&min_keyword_count=${minKeywordCount}`;
+    if (entityType) {
+        url += `&type=${entityType}`;
+    }
+
+    // Show loading message
+    container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 800px; color: #8b98a5;"><span>Loading entity-keyword network...</span></div>';
+
+    fetch(url)
+        .then(response => response.json())
+        .then(networkData => {
+            if (!networkData.nodes || networkData.nodes.length === 0) {
+                container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 800px; color: #8b98a5;">No entities with keywords available</div>';
+                return;
+            }
+
+            // Store network data
+            currentEntityNetworkData = networkData;
+
+            // Clear container
+            container.innerHTML = '';
+
+            // Make container relative and hide overflow to prevent graph escaping
+            container.style.position = 'relative';
+            container.style.overflow = 'hidden';
+
+            const width = container.clientWidth;
+            // Dynamic height based on number of nodes for better visibility
+            const height = Math.max(800, networkData.nodes.length * 40);
+
+            // Create SVG with viewBox for proper containment
+            const svg = d3.select(container)
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .attr('viewBox', `0 0 ${width} ${height}`)
+                .style('display', 'block');
+
+            // Add zoom controls container
+            const controls = d3.select(container)
+                .append('div')
+                .style('position', 'absolute')
+                .style('top', '10px')
+                .style('right', '10px')
+                .style('display', 'flex')
+                .style('gap', '5px')
+                .style('z-index', '100');
+
+            // Add zoom in button
+            controls.append('button')
+                .attr('title', 'Zoom In')
+                .style('background', '#16181c')
+                .style('border', '1px solid #2f3336')
+                .style('color', '#e7e9ea')
+                .style('padding', '8px 12px')
+                .style('cursor', 'pointer')
+                .style('border-radius', '4px')
+                .style('font-size', '16px')
+                .style('transition', 'all 0.2s')
+                .html('➕')
+                .on('mouseenter', function() {
+                    d3.select(this).style('background', '#1da1f2').style('border-color', '#1da1f2');
+                })
+                .on('mouseleave', function() {
+                    d3.select(this).style('background', '#16181c').style('border-color', '#2f3336');
+                })
+                .on('click', function() {
+                    svg.transition().call(zoom.scaleBy, 1.3);
+                });
+
+            // Add zoom out button
+            controls.append('button')
+                .attr('title', 'Zoom Out')
+                .style('background', '#16181c')
+                .style('border', '1px solid #2f3336')
+                .style('color', '#e7e9ea')
+                .style('padding', '8px 12px')
+                .style('cursor', 'pointer')
+                .style('border-radius', '4px')
+                .style('font-size', '16px')
+                .style('transition', 'all 0.2s')
+                .html('➖')
+                .on('mouseenter', function() {
+                    d3.select(this).style('background', '#1da1f2').style('border-color', '#1da1f2');
+                })
+                .on('mouseleave', function() {
+                    d3.select(this).style('background', '#16181c').style('border-color', '#2f3336');
+                })
+                .on('click', function() {
+                    svg.transition().call(zoom.scaleBy, 0.7);
+                });
+
+            // Add reset button
+            controls.append('button')
+                .attr('title', 'Reset View')
+                .style('background', '#16181c')
+                .style('border', '1px solid #2f3336')
+                .style('color', '#e7e9ea')
+                .style('padding', '8px 12px')
+                .style('cursor', 'pointer')
+                .style('border-radius', '4px')
+                .style('font-size', '14px')
+                .style('transition', 'all 0.2s')
+                .html('⟲')
+                .on('mouseenter', function() {
+                    d3.select(this).style('background', '#17bf63').style('border-color', '#17bf63');
+                })
+                .on('mouseleave', function() {
+                    d3.select(this).style('background', '#16181c').style('border-color', '#2f3336');
+                })
+                .on('click', function() {
+                    svg.transition().duration(750).call(
+                        zoom.transform,
+                        d3.zoomIdentity
+                    );
+                });
+
+            // Create zoom behavior
+            const zoom = d3.zoom()
+                .scaleExtent([0.5, 4])  // Allow zoom from 50% to 400%
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                });
+
+            // Apply zoom to SVG
+            svg.call(zoom);
+
+            // Create main group for zoom/pan
+            const g = svg.append('g');
+
+            // Create tooltip
+            let tooltip = d3.select(container).select('.entity-network-tooltip');
+            if (tooltip.empty()) {
+                tooltip = d3.select(container)
+                    .append('div')
+                    .attr('class', 'entity-network-tooltip')
+                    .style('position', 'absolute')
+                    .style('visibility', 'hidden')
+                    .style('background', 'rgba(15, 20, 25, 0.95)')
+                    .style('border', '2px solid #1da1f2')
+                    .style('border-radius', '8px')
+                    .style('padding', '12px')
+                    .style('color', '#e7e9ea')
+                    .style('font-size', '13px')
+                    .style('max-width', '300px')
+                    .style('z-index', '1000')
+                    .style('pointer-events', 'none');
+            }
+
+            // Create color scale based on entity type
+            const entityColorScale = d3.scaleOrdinal()
+                .domain(['PERSON', 'ORG', 'GPE', 'LOC', 'MONEY', 'PRODUCT', 'EVENT'])
+                .range(['#1da1f2', '#17bf63', '#f91880', '#ffa500', '#ffd700', '#9b59b6', '#e74c3c']);
+
+            // Keyword nodes get a neutral gray color
+            const keywordColor = '#8b98a5';
+
+            // Create link strength scale
+            const maxValue = d3.max(networkData.links, d => d.value) || 1;
+            const linkWidthScale = d3.scaleLinear()
+                .domain([0, maxValue])
+                .range([1, 4]);
+
+            // Initialize nodes
+            networkData.nodes.forEach(node => {
+                node.x = width / 2 + (Math.random() - 0.5) * width * 0.8;
+                node.y = height / 2 + (Math.random() - 0.5) * height * 0.8;
+            });
+
+            // Create force simulation with stronger forces
+            const simulation = d3.forceSimulation(networkData.nodes)
+                .force('link', d3.forceLink(networkData.links)
+                    .id(d => d.id)
+                    .distance(d => {
+                        // Entities should be further apart
+                        const sourceIsEntity = d.source.type === 'entity';
+                        const targetIsEntity = d.target.type === 'entity';
+                        if (sourceIsEntity && targetIsEntity) return 300;
+                        return 120;
+                    })
+                    .strength(0.5))
+                .force('charge', d3.forceManyBody()
+                    .strength(d => d.type === 'entity' ? -800 : -300))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide()
+                    .radius(d => d.type === 'entity' ? 15 : 10))
+                .velocityDecay(0.4);
+
+            // Create links (inside zoom group)
+            const linksGroup = g.append('g').attr('class', 'links');
+            const linkElements = linksGroup.selectAll('line')
+                .data(networkData.links)
+                .enter()
+                .append('line')
+                .attr('stroke', '#536471')
+                .attr('stroke-width', d => linkWidthScale(d.value))
+                .attr('stroke-opacity', 0.4);
+
+            linkElements.append('title')
+                .text(d => `${d.value} co-occurrences`);
+
+            // Create nodes (inside zoom group)
+            const nodes = g.append('g')
+                .selectAll('g')
+                .data(networkData.nodes)
+                .enter()
+                .append('g')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+
+            // Add circles to nodes
+            nodes.append('circle')
+                .attr('r', d => {
+                    if (d.type === 'entity') {
+                        // Entity nodes: smaller now
+                        return Math.sqrt(d.mentions) * 0.8 + 8;
+                    } else {
+                        // Keyword nodes: even smaller
+                        return Math.sqrt(d.count) * 0.6 + 5;
+                    }
+                })
+                .attr('fill', d => {
+                    if (d.type === 'entity') {
+                        return entityColorScale(d.label);
+                    } else {
+                        return keywordColor;
+                    }
+                })
+                .attr('stroke', '#0f1419')
+                .attr('stroke-width', 2)
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event, d) {
+                    if (d.type === 'entity') {
+                        const labelEmoji = {
+                            'PERSON': '👤',
+                            'ORG': '🏢',
+                            'GPE': '📍',
+                            'LOC': '🌍',
+                            'MONEY': '💰',
+                            'PRODUCT': '📦',
+                            'EVENT': '🎭'
+                        };
+                        const emoji = labelEmoji[d.label] || '🔖';
+                        tooltip.html(`
+                            <strong>${emoji} ${d.id}</strong><br/>
+                            Type: ${d.label}<br/>
+                            Mentions: ${d.mentions}<br/>
+                            Articles: ${d.articles}
+                        `);
+                    } else {
+                        tooltip.html(`
+                            <strong>🔑 ${d.id}</strong><br/>
+                            Type: Keyword<br/>
+                            Total Count: ${d.count}
+                        `);
+                    }
+                    tooltip.style('visibility', 'visible');
+                    d3.select(this).attr('stroke', '#1da1f2').attr('stroke-width', 3);
+                })
+                .on('mousemove', function(event) {
+                    tooltip
+                        .style('top', (event.pageY - container.offsetTop + 10) + 'px')
+                        .style('left', (event.pageX - container.offsetLeft + 10) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.style('visibility', 'hidden');
+                    d3.select(this).attr('stroke', '#0f1419').attr('stroke-width', 2);
+                });
+
+            // Add labels to nodes
+            nodes.append('text')
+                .text(d => d.id.length > 12 ? d.id.substring(0, 12) + '...' : d.id)
+                .attr('text-anchor', 'middle')
+                .attr('dy', d => {
+                    if (d.type === 'entity') {
+                        return Math.sqrt(d.mentions) * 0.8 + 18;
+                    } else {
+                        return Math.sqrt(d.count) * 0.6 + 13;
+                    }
+                })
+                .attr('fill', '#e7e9ea')
+                .attr('font-size', d => d.type === 'entity' ? '11px' : '9px')
+                .attr('font-weight', d => d.type === 'entity' ? '700' : '500')
+                .style('pointer-events', 'none')
+                .style('user-select', 'none');
+
+            // Update positions on tick with boundary clamping
+            simulation.on('tick', () => {
+                // Clamp node positions to stay within bounds (prevent overflow)
+                networkData.nodes.forEach(node => {
+                    node.x = Math.max(60, Math.min(width - 60, node.x));
+                    node.y = Math.max(60, Math.min(height - 60, node.y));
+                });
+
+                linkElements
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                nodes.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+
+            // Drag functions
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+
+            // Store simulation reference
+            currentEntityNetworkSimulation = simulation;
+            entityNetworkElements = { svg, g, zoom, linkElements, nodes, entityColorScale, linkWidthScale };
+        })
+        .catch(error => {
+            console.error('Error loading entity-keyword network:', error);
+            container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 800px; color: #dc3545;">Error loading entity-keyword network</div>';
+        });
+}
+
 // Load alerts
 function loadAlerts() {
     fetch('/api/alerts?limit=50')
@@ -410,7 +764,8 @@ function createForexEventCard(alert) {
 // Load sentiment time series chart
 function loadSentimentChart() {
     const category = currentCategory === 'all' ? '' : currentCategory;
-    const url = category ? `/api/visualizations/sentiment-chart?category=${category}&hours=24` : '/api/visualizations/sentiment-chart?hours=24';
+    const hours = current24hTimeRange || 24;
+    const url = category ? `/api/visualizations/sentiment-chart?category=${category}&hours=${hours}` : `/api/visualizations/sentiment-chart?hours=${hours}`;
 
     fetch(url)
         .then(response => response.json())
@@ -669,7 +1024,8 @@ function showKeywordArticlesModal(keyword) {
                 // Create time range text
                 const hours = current24hTimeRange || 24;
                 let timeText = 'last 24 hours';
-                if (hours === 168) timeText = 'last week';
+                if (hours === 9999) timeText = 'all time';
+                else if (hours === 168) timeText = 'last week';
                 else if (hours === 24) timeText = 'last 24 hours';
                 else if (hours === 12) timeText = 'last 12 hours';
                 else if (hours === 6) timeText = 'last 6 hours';
@@ -688,7 +1044,8 @@ function showKeywordArticlesModal(keyword) {
                 // Create time range text for no results message
                 const hours = current24hTimeRange || 24;
                 let timeText = 'last 24 hours';
-                if (hours === 168) timeText = 'last week';
+                if (hours === 9999) timeText = 'all time';
+                else if (hours === 168) timeText = 'last week';
                 else if (hours === 24) timeText = 'last 24 hours';
                 else if (hours === 12) timeText = 'last 12 hours';
                 else if (hours === 6) timeText = 'last 6 hours';
@@ -1083,6 +1440,25 @@ function setupAdminButtons() {
     }
 }
 
+// Setup entity type filter buttons
+function setupEntityButtons() {
+    const entityButtons = document.querySelectorAll('.entity-type-btn');
+
+    entityButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            entityButtons.forEach(btn => btn.classList.remove('active'));
+
+            // Add active class to clicked button
+            this.classList.add('active');
+
+            // Load entity network with selected type
+            const entityType = this.dataset.type;
+            createEntityNetwork(entityType);
+        });
+    });
+}
+
 // Get color based on sentiment score
 function getSentimentColor(score) {
     if (score <= -0.6) return '#dc3545';
@@ -1170,7 +1546,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update the time label in the title
             const label = document.getElementById('topKeywordsTimeLabel');
             if (label) {
-                if (current24hTimeRange === 168) {
+                if (current24hTimeRange === 9999) {
+                    label.textContent = '(All Data)';
+                } else if (current24hTimeRange === 168) {
                     label.textContent = '(Last Week)';
                 } else if (current24hTimeRange === 24) {
                     label.textContent = '(Last 24 Hours)';
@@ -1193,6 +1571,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Reload data with new time range
             loadWordFrequencyChart();
+            loadSentimentChart(); // Reload sentiment chart with new time range
             loadTweets(); // Reload tweets with new time range
         });
     });

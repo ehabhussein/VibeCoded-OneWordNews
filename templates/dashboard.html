@@ -427,6 +427,12 @@
                         </svg>
                         Search
                     </a>
+                    <a href="/intelligence" class="btn btn-info btn-sm me-2" title="AI-powered news intelligence and insights">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
+                            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+                        </svg>
+                        Intelligence
+                    </a>
                     <button class="btn btn-primary btn-sm me-2" id="refreshRssBtn" title="Force refresh all RSS feeds">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
                             <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
@@ -470,6 +476,9 @@
                         <div class="d-flex gap-2 flex-wrap">
                             <!-- Time Range Toggles -->
                             <div class="btn-group" role="group">
+                                <button type="button" class="time-range-btn-24h" data-hours="9999" title="All data">
+                                    All
+                                </button>
                                 <button type="button" class="time-range-btn-24h" data-hours="168" title="Last 7 days">
                                     Week
                                 </button>
@@ -516,6 +525,26 @@
                         </div>
                     </div>
                     <div id="wordFrequencyChart" style="min-height: 500px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Entity Recognition Section -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="chart-container">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">🔗 Entity Network (People, Companies, Locations)</h5>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-primary entity-type-btn active" data-type="">All</button>
+                            <button type="button" class="btn btn-outline-primary entity-type-btn" data-type="PERSON">People</button>
+                            <button type="button" class="btn btn-outline-primary entity-type-btn" data-type="ORG">Organizations</button>
+                            <button type="button" class="btn btn-outline-primary entity-type-btn" data-type="GPE">Locations</button>
+                        </div>
+                    </div>
+                    <div id="entityNetworkContainer" style="min-height: 800px; position: relative;">
+                        <p class="text-center text-muted" style="padding-top: 200px;">Loading entity network...</p>
+                    </div>
                 </div>
             </div>
         </div>
